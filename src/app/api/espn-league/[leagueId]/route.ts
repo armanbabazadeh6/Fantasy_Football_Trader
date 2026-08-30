@@ -17,10 +17,13 @@ export async function GET(
       );
     }
 
-    const s2 = req.headers.get("x-espn-s2") ?? undefined;
-    const swid = req.headers.get("x-espn-swid") ?? undefined;
+    const creds = {
+      s2: req.headers.get("x-espn-s2") ?? undefined,
+      swid: req.headers.get("x-espn-swid") ?? undefined,
+      rawCookie: req.headers.get("x-espn-cookie") ?? undefined,
+    };
 
-    const mapped = await mapEspnLeagueToSleeper(leagueId, { s2, swid });
+    const mapped = await mapEspnLeagueToSleeper(leagueId, creds);
 
     const response: LeagueResponse = {
       ok: true,

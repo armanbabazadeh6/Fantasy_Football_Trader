@@ -22,15 +22,27 @@ interface StoredEspnCreds {
   leagueId: string;
   s2: string;
   swid: string;
+  raw?: string;
 }
 
-function parseEspnCreds(rawS2: string, rawSwid: string): { s2?: string; swid?: string } {
+interface ParsedEspnCreds {
+  s2?: string;
+  swid?: string;
+  rawCookie?: string;
+}
+
+function parseEspnCreds(rawS2: string, rawSwid: string): ParsedEspnCreds {
   const trimmedS2 = rawS2.trim();
   const trimmedSwid = rawSwid.trim();
   if (/espn_s2\s*=/i.test(trimmedS2)) {
+    const raw = trimmedS2
+      .replace(/^cookie\s*:\s*/i, "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/;\s*;/g, "; ")
+      .trim();
     let parsedS2 = "";
     let parsedSwid = "";
-    for (const pair of trimmedS2.split(/;\s*/)) {
+    for (const pair of raw.split(/;\s*/)) {
       const eq = pair.indexOf("=");
       if (eq === -1) continue;
       const name = pair.slice(0, eq).trim().toLowerCase();
@@ -41,12 +53,21 @@ function parseEspnCreds(rawS2: string, rawSwid: string): { s2?: string; swid?: s
     return {
       s2: parsedS2 || undefined,
       swid: parsedSwid || trimmedSwid || undefined,
+      rawCookie: raw,
     };
   }
   return {
     s2: trimmedS2 || undefined,
     swid: trimmedSwid || undefined,
   };
+}
+
+function credsToHeaders(creds: ParsedEspnCreds): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (creds.s2) headers["x-espn-s2"] = creds.s2;
+  if (creds.swid) headers["x-espn-swid"] = creds.swid;
+  if (creds.rawCookie) headers["x-espn-cookie"] = creds.rawCookie;
+  return headers;
 }
 
 const TABS: { key: Tab; label: string }[] = [
@@ -84,7 +105,7 @@ export default function LeaguePage() {
       const credsRaw = localStorage.getItem("fft.espn");
       if (credsRaw) {
         creds = JSON.parse(credsRaw) as StoredEspnCreds;
-        setS2(creds.s2 ?? "");
+        setS2(creds.raw || creds.s2 || "");
         setSwid(creds.swid ?? "");
       }
       setLeagueId(storedLeague?.leagueId ?? creds?.leagueId ?? "");
@@ -107,10 +128,7 @@ export default function LeaguePage() {
     setTradesError(null);
     const creds = parseEspnCreds(s2, swid);
     fetch(`/api/espn-league/${data.league.id}/transactions`, {
-      headers: {
-        ...(creds.s2 ? { "x-espn-s2": creds.s2 } : {}),
-        ...(creds.swid ? { "x-espn-swid": creds.swid } : {}),
-      },
+      headers: credsToHeaders(creds),
     })
       .then((res) => res.json())
       .then((json: TradesResponse) => {
@@ -144,10 +162,7 @@ export default function LeaguePage() {
       let json: LeagueResponse & { error?: string };
       if (platform === "ESPN") {
         const res = await fetch(`/api/espn-league/${id}`, {
-          headers: {
-            ...(creds.s2 ? { "x-espn-s2": creds.s2 } : {}),
-            ...(creds.swid ? { "x-espn-swid": creds.swid } : {}),
-          },
+          headers: credsToHeaders(creds),
         });
         json = (await res.json()) as LeagueResponse;
       } else {
@@ -160,11 +175,16 @@ export default function LeaguePage() {
       setTradesError(null);
       setTab("standings");
       setExpandedTeam(stored?.leagueId === id ? stored.rosterId : null);
-      if (platform === "ESPN" && creds.s2) {
+      if (platform === "ESPN" && (creds.s2 || creds.rawCookie)) {
         try {
           localStorage.setItem(
             "fft.espn",
-            JSON.stringify({ leagueId: id, s2: creds.s2, swid: creds.swid ?? "" } as StoredEspnCreds)
+            JSON.stringify({
+              leagueId: id,
+              s2: creds.s2 ?? "",
+              swid: creds.swid ?? "",
+              raw: creds.rawCookie ?? "",
+            } as StoredEspnCreds)
           );
         } catch {
         }

@@ -14,6 +14,7 @@ const ESPN_FFL_BASE = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl";
 export interface EspnCredentials {
   s2?: string;
   swid?: string;
+  rawCookie?: string;
 }
 
 export type { EspnRawPlayer, EspnRawTeam };
@@ -128,6 +129,17 @@ function espnHeaders(creds: EspnCredentials): Record<string, string> {
     "user-agent": BROWSER_UA,
     accept: "application/json",
   };
+  if (creds.rawCookie && creds.rawCookie.trim().length > 0) {
+    const raw = creds.rawCookie
+      .replace(/^cookie\s*:\s*/i, "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/;\s*;/g, "; ")
+      .trim();
+    if (raw.length > 0) {
+      headers.cookie = raw;
+      return headers;
+    }
+  }
   const cookie: string[] = [];
   if (creds.s2 && creds.s2.trim().length > 0) cookie.push(`espn_s2=${creds.s2.trim()}`);
   if (creds.swid && creds.swid.trim().length > 0) cookie.push(`SWID=${creds.swid.trim()}`);

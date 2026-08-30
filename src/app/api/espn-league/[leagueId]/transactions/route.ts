@@ -6,7 +6,6 @@ import {
   fetchEspnTransactions,
   matchEspnPlayer,
   normalizeEspnPosition,
-  type EspnCredentials,
   type EspnTransaction,
   type EspnTransactionItem,
   type SleeperIndexes,
@@ -104,9 +103,10 @@ export async function GET(
       );
     }
 
-    const creds: EspnCredentials = {
+    const creds = {
       s2: req.headers.get("x-espn-s2") ?? undefined,
       swid: req.headers.get("x-espn-swid") ?? undefined,
+      rawCookie: req.headers.get("x-espn-cookie") ?? undefined,
     };
 
     const [espnLeague, transactions, computed] = await Promise.all([
