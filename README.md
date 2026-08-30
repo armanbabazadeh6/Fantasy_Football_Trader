@@ -17,8 +17,9 @@ Tuned for 12-team PPR leagues.
 | **Trade Analyzer** | Build any trade with a searchable player picker. A transparent value engine scores each side live as you build, then the AI analyst returns a verdict (Accept / Counter / Decline), confidence, key factors, risks, news impact, and counter-offer ideas. |
 | **Player Value Board** | Every fantasy-relevant NFL player scored 0-100 with sortable columns: PPG, games, positional rank, age, tier. Search and filter by position. |
 | **Player Pages** | Weekly fantasy output chart, boom/bust rates, best/worst weeks, two-season history, value breakdown, and every recent news mention. |
-| **Live News Feed** | Headlines from ESPN, CBS Sports, Yahoo Sports, and ProFootballTalk — the same feed the analyzer reads, matched to players by name. |
-| **Sleeper League Integration** | Paste your league ID to load real standings, rosters, and scoring format. Set your team once and the analyzer shows quick-add chips from your roster and factors your positional needs into the verdict. |
+| **Live News Feed** | Headlines from ESPN (news API + RSS), CBS Sports, Yahoo Sports, and ProFootballTalk — the same feed the analyzer reads, matched to players by name. |
+| **League Integration** | Connect your ESPN Fantasy or Sleeper league to load real standings, rosters, and scoring format. Set your team once and the analyzer shows quick-add chips from your roster and factors your positional needs into the verdict. ESPN rosters are matched to Sleeper player IDs automatically. |
+| **Bye Week Awareness** | Full-season schedule is parsed to derive every team's bye week — shown on player pages, the value board, trade cards, and included in the AI's context. |
 | **Saved Analyses** | Every verdict is saved locally so you can revisit past trade calls. |
 
 ## How values are computed
@@ -68,8 +69,10 @@ then everything is served from a persistent on-disk cache.
 
 | Source | Use |
 | --- | --- |
-| [Sleeper API](https://docs.sleeper.app) | Players, weekly/season stats, trending, leagues, rosters |
-| ESPN, CBS Sports, Yahoo Sports, ProFootballTalk RSS | Live news |
+| [Sleeper API](https://docs.sleeper.app) | Players, weekly/season stats, trending |
+| ESPN Fantasy API | League standings, rosters, scoring settings (private leagues via your own `espn_s2` + `SWID` cookies, which stay in your browser) |
+| ESPN site APIs | NFL news feed, full-season schedule for bye weeks |
+| CBS Sports, Yahoo Sports, ProFootballTalk RSS | Additional live news |
 | Sleeper CDN | Player headshots and team logos |
 
 All data is cached to a local `.cache/` directory with per-type TTLs so the
@@ -94,7 +97,7 @@ src/
     players/             Value board
     player/[id]/         Player detail
     news/                News browser
-    league/              Sleeper league import
+    league/              League import (ESPN + Sleeper)
     api/
       analyze/           Trade analysis (rule engine + AI)
       players/           Player search
@@ -116,11 +119,11 @@ scripts/
 
 ## Roadmap
 
+- AI narratives via OpenAI-compatible endpoints (GLM) — wired and awaiting an API key
 - In-season weekly projections and matchup context
 - Dynasty vs redraft value profiles
-- Trade history from connected Sleeper leagues
 - Automated watchlists for players in your news feed
 
 ## Disclaimer
 
-For personal fantasy league use. Not affiliated with the NFL or Sleeper.
+For personal fantasy league use. Not affiliated with the NFL, ESPN, or Sleeper.
