@@ -15,7 +15,7 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
     for (const item of items) {
       counts.set(item.source, (counts.get(item.source) ?? 0) + 1);
     }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [items]);
 
   const filtered = useMemo(() => {

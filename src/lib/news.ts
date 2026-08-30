@@ -2,13 +2,22 @@ import { XMLParser } from "fast-xml-parser";
 import { getCached } from "./cache";
 import type { NewsItem, NFLPlayer } from "@/types";
 
-const NEWS_TTL = 15 * 60 * 1000;
+const NEWS_TTL = 8 * 60 * 1000;
 
 const SOURCES = [
   { name: "ESPN", url: "https://www.espn.com/espn/rss/nfl/news" },
   { name: "CBS Sports", url: "https://www.cbssports.com/rss/headlines/nfl/" },
   { name: "Yahoo Sports", url: "https://sports.yahoo.com/nfl/rss/" },
   { name: "ProFootballTalk", url: "https://profootballtalk.nbcsports.com/feed/" },
+  { name: "Rotoballer", url: "https://www.rotoballer.com/rss" },
+  { name: "Yahoo Fantasy", url: "https://sports.yahoo.com/fantasy/rss/" },
+  { name: "Sleeper Blog", url: "https://blog.sleeper.com/feed/" },
+];
+
+const GOOGLE_NEWS_QUERIES = [
+  "NFL+fantasy+football",
+  "NFL+injury",
+  "NFL+when:1d",
 ];
 
 const parser = new XMLParser({ ignoreAttributes: true });
@@ -147,10 +156,48 @@ async function loadEspnApiNews(): Promise<NewsItem[]> {
   }
 }
 
+function splitGoogleNewsTitle(title: string): { title: string; publisher: string } {
+  const separator = title.lastIndexOf(" - ");
+  if (separator > 20 && separator < title.length - 3) {
+    return {
+      title: title.slice(0, separator).trim(),
+      publisher: title.slice(separator + 3).trim(),
+    };
+  }
+  return { title, publisher: "Google News" };
+}
+
+async function loadGoogleNews(query: string): Promise<NewsItem[]> {
+  const url = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": BROWSER_UA },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const items = toItems(parser.parse(xml), "Google News");
+    return items.map((item) => {
+      const split = splitGoogleNewsTitle(item.title);
+      return {
+        ...item,
+        title: split.title,
+        source: split.publisher,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchNews(): Promise<NewsItem[]> {
-  return getCached<NewsItem[]>("nfl_news_v3", NEWS_TTL, async () => {
-    const loaders = SOURCES.map((source) => loadSource(source));
+  return getCached<NewsItem[]>("nfl_news_v4", NEWS_TTL, async () => {
+    const loaders: Promise<NewsItem[]>[] = SOURCES.map((source) => loadSource(source));
     loaders.push(loadEspnApiNews());
+    for (const query of GOOGLE_NEWS_QUERIES) {
+      loaders.push(loadGoogleNews(query));
+    }
     const settled = await Promise.allSettled(loaders);
     const items = settled.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
     const seen = new Set<string>();
@@ -161,7 +208,7 @@ export async function fetchNews(): Promise<NewsItem[]> {
       return true;
     });
     deduped.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
-    return deduped.slice(0, 200);
+    return deduped.slice(0, 300);
   });
 }
 
