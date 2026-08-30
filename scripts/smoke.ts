@@ -4,7 +4,9 @@ import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/n
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
+import { findTradePartners, optimalLineup, powerRankings } from "@/lib/league-intel";
 import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
+import type { LeagueTeam, PlayerSummary } from "@/types";
 import {
   computeNeeds,
   computePlayerValue,
@@ -177,6 +179,66 @@ async function unitTests(): Promise<void> {
       svg.includes("Ja&apos;Marr Chase") &&
       svg.includes("LEAN DECLINE") &&
       !svg.includes("<&")
+  );
+
+  const makePlayer = (id: string, name: string, position: string, score: number | null, ppg: number | null): PlayerSummary => ({
+    id,
+    name,
+    position,
+    team: "KC",
+    status: "Active",
+    rookie: false,
+    value: { score, tier: score === null ? "Unknown" : "Starter", ppg, games: 16 },
+  });
+  const makeTeam = (rosterId: number, teamName: string, players: PlayerSummary[], wins = 5, losses = 5, fpts = 1000): LeagueTeam => ({
+    rosterId,
+    teamName,
+    displayName: "",
+    wins,
+    losses,
+    ties: 0,
+    fpts,
+    players,
+    starters: [],
+    totalValue: Math.round(players.reduce((sum, p) => sum + (p.value.score ?? 0), 0)),
+  });
+
+  const qbA = makePlayer("q1", "Alpha QB", "QB", 80, 20);
+  const rbWeak = makePlayer("r1", "Weak RB", "RB", 40, 8);
+  const stackTeam = makeTeam(1, "Stacked", [qbA, rbWeak, makePlayer("w1", "Star WR", "WR", 90, 22), makePlayer("r2", "Backup RB", "RB", 65, 12)], 10, 2, 1400);
+  const rbHeavy = makeTeam(2, "RB Rich", [makePlayer("r3", "Elite RB", "RB", 92, 23), makePlayer("r4", "Good RB", "RB", 75, 15), makePlayer("q2", "Bad QB", "QB", 30, 10), makePlayer("w2", "Fine WR", "WR", 60, 14)], 4, 8, 1100);
+  const myTeam = makeTeam(3, "My Team", [makePlayer("q3", "Shaky QB", "QB", 40, 11), makePlayer("r5", "Barely RB", "RB", 35, 7), makePlayer("w3", "Fine WR", "WR", 70, 16), makePlayer("k1", "Solid K", "K", 60, 8)], 5, 5, 1000);
+  const teams = [stackTeam, rbHeavy, myTeam];
+
+  const ranks = powerRankings(teams);
+  check(
+    "power rankings rank the stronger team first",
+    ranks.length === 3 && ranks[0].teamName === "Stacked" && ranks[0].rank === 1,
+    `order: ${ranks.map((r) => `${r.teamName}(${Math.round(r.powerScore)})`).join(" > ")}`
+  );
+
+  const partners = findTradePartners(teams, 3);
+  check(
+    "trade partner finder spots RB surplus for weak RB team",
+    partners.length === 1 &&
+      partners[0].teamName === "RB Rich" &&
+      partners[0].targets.some((t) => t.position === "RB" && t.targetName === "Good RB"),
+    partners.length ? `target: ${partners[0].targets[0].targetName}` : "no partners"
+  );
+
+  const lineup = optimalLineup(stackTeam.players, { QB: 1, RB: 1, WR: 1, FLEX: 1, K: 1, DEF: 1 });
+  check(
+    "optimal lineup fills slots with best players",
+    lineup.starters.find((s) => s.slot === "QB")?.player?.name === "Alpha QB" &&
+      lineup.starters.find((s) => s.slot === "RB")?.player?.name === "Backup RB" &&
+      lineup.starters.find((s) => s.slot === "FLEX")?.player?.name === "Weak RB",
+    lineup.starters.map((s) => `${s.slot}:${s.player?.name ?? "—"}`).join(" ")
+  );
+  check(
+    "optimal lineup leaves K/DEF empty when unavailable and sums projections",
+    lineup.starters.find((s) => s.slot === "K")?.player === null &&
+      lineup.projectedTotal > 0,
+    `projected ${lineup.projectedTotal}`
   );
 }
 
