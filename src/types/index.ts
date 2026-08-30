@@ -80,6 +80,13 @@ export interface NewsItem {
   summary: string;
 }
 
+export interface EspnSeasonStat {
+  season: number;
+  total: number;
+  ppg: number;
+  games: number;
+}
+
 export interface PlayerSummary {
   id: string;
   name: string;
@@ -93,6 +100,7 @@ export interface PlayerSummary {
   posRank?: number;
   trendCount?: number;
   byeWeek?: number;
+  espnSeason?: EspnSeasonStat;
 }
 
 export interface PlayerBundle extends PlayerSummary {
@@ -150,6 +158,7 @@ export interface LeagueTeam {
   players: PlayerSummary[];
   starters: string[];
   totalValue: number;
+  projectedRank?: number;
 }
 
 export interface LeagueResponse {
@@ -207,6 +216,7 @@ export interface PowerRank {
   rank: number;
   standingRank: number;
   movement: number;
+  espnProjectedRank?: number;
 }
 
 export interface TradePartnerTarget {
@@ -246,6 +256,7 @@ export interface EspnRawPlayer {
   proTeam?: string;
   proTeamId?: number;
   injuryStatus?: string;
+  stats?: unknown[];
 }
 
 export interface EspnRawTeam {
@@ -254,6 +265,7 @@ export interface EspnRawTeam {
   location?: string;
   nickname?: string;
   abbrev?: string;
+  currentProjectedRank?: number;
   record?: {
     overall?: {
       wins?: number;
@@ -263,6 +275,10 @@ export interface EspnRawTeam {
     };
   };
   roster?: {
-    entries?: { playerPoolEntry?: { player?: EspnRawPlayer } }[];
+    entries?: {
+      playerPoolEntry?: {
+        player?: EspnRawPlayer;
+      };
+    }[];
   };
 }

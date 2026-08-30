@@ -2,6 +2,7 @@ import { computeAllPlayers, type ComputedPlayer } from "./nfl-data";
 import type {
   EspnRawPlayer,
   EspnRawTeam,
+  EspnSeasonStat,
   LeagueTeam,
   NFLPlayer,
   PlayerSummary,
@@ -246,7 +247,7 @@ export async function fetchEspnLeague(
     points?: number;
     value?: number;
   }[];
-  const receptions = items.find((item) => item.statId === 24);
+  const receptions = items.find((item) => item.statId === 53);
   const recPoints = receptions?.points ?? receptions?.value ?? null;
   let scoringLabel: string;
   if (recPoints !== null) {
@@ -280,6 +281,7 @@ export async function fetchEspnTransactions(
 
 export interface SleeperIndexes {
   byNamePos: Map<string, NFLPlayer[]>;
+  byNameOnly: Map<string, NFLPlayer[]>;
   defByTeam: Map<string, NFLPlayer>;
 }
 
@@ -287,6 +289,7 @@ export function buildSleeperIndexes(
   computed: Map<string, ComputedPlayer>
 ): SleeperIndexes {
   const byNamePos = new Map<string, NFLPlayer[]>();
+  const byNameOnly = new Map<string, NFLPlayer[]>();
   const defByTeam = new Map<string, NFLPlayer>();
   for (const entry of computed.values()) {
     const player = entry.player;
@@ -295,8 +298,10 @@ export function buildSleeperIndexes(
     }
     const key = `${normalizeNameKey(player.name)}|${player.position}`;
     byNamePos.set(key, [...(byNamePos.get(key) ?? []), player]);
+    const nameKey = normalizeNameKey(player.name);
+    byNameOnly.set(nameKey, [...(byNameOnly.get(nameKey) ?? []), player]);
   }
-  return { byNamePos, defByTeam };
+  return { byNamePos, byNameOnly, defByTeam };
 }
 
 export function espnPlayerName(player: EspnRawPlayer): string {
@@ -350,6 +355,24 @@ function toPlayerSummary(
   };
 }
 
+function extractEspnSeason(espnPlayer: EspnRawPlayer): EspnSeasonStat | undefined {
+  const stats = espnPlayer.stats as
+    | { statSourceId?: number; statSplitTypeId?: number; seasonId?: number; appliedTotal?: number; appliedAverage?: number }[]
+    | undefined;
+  if (!Array.isArray(stats)) return undefined;
+  const seasonTotals = stats.filter(
+    (stat) => stat.statSourceId === 0 && stat.statSplitTypeId === 0 && (stat.appliedTotal ?? 0) > 0
+  );
+  if (seasonTotals.length === 0) return undefined;
+  seasonTotals.sort((a, b) => (b.seasonId ?? 0) - (a.seasonId ?? 0));
+  const latest = seasonTotals[0];
+  const total = Math.round((latest.appliedTotal ?? 0) * 10) / 10;
+  const ppg = Math.round((latest.appliedAverage ?? 0) * 10) / 10;
+  if (total <= 0 || ppg <= 0) return undefined;
+  const games = Math.max(1, Math.round(total / ppg));
+  return { season: latest.seasonId ?? 0, total, ppg, games };
+}
+
 export async function mapEspnLeagueToSleeper(
   leagueId: string,
   creds: EspnCredentials = {}
@@ -379,11 +402,28 @@ export async function mapEspnLeagueToSleeper(
       if (!espnPlayer) continue;
       const name = espnPlayerName(espnPlayer);
       if (!name) continue;
-      const matched = matchEspnPlayer(espnPlayer, indexes);
+      const position = resolveEspnPosition(espnPlayer);
+      const espnTeamAbbr = espnProTeamToAbbr(espnPlayer);
+
+      let matched = matchEspnPlayer(espnPlayer, indexes);
+      if (!matched && position !== "DEF") {
+        const loose = indexes.byNameOnly.get(normalizeNameKey(name)) ?? [];
+        if (loose.length === 1) {
+          matched = loose[0];
+        } else if (loose.length > 1 && espnTeamAbbr) {
+          matched = loose.find((candidate) => candidate.team === espnTeamAbbr) ?? matched;
+        }
+      }
+
       if (matched) {
-        players.push(toPlayerSummary(matched, computed));
+        const summary = toPlayerSummary(matched, computed);
+        if (position) summary.position = position;
+        if (espnTeamAbbr) summary.team = espnTeamAbbr;
+        const espnSeason = extractEspnSeason(espnPlayer);
+        if (espnSeason) summary.espnSeason = espnSeason;
+        players.push(summary);
       } else {
-        unmatched.push(`${name} (${resolveEspnPosition(espnPlayer)})`);
+        unmatched.push(`${name} (${position})`);
       }
     }
 
@@ -400,6 +440,7 @@ export async function mapEspnLeagueToSleeper(
       players,
       starters: [],
       totalValue: Math.round(players.reduce((sum, p) => sum + (p.value.score ?? 0), 0)),
+      projectedRank: team.currentProjectedRank,
     };
   });
 

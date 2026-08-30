@@ -500,6 +500,16 @@ export default function LeaguePage() {
                                       {player.byeWeek ? ` · Bye W${player.byeWeek}` : ""}
                                     </p>
                                   </div>
+                                  <div className="shrink-0 text-right">
+                                    {player.espnSeason ? (
+                                      <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                                        ESPN {player.espnSeason.ppg}/g
+                                      </p>
+                                    ) : null}
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-600">
+                                      {formatPts(player.value.ppg)}/g engine
+                                    </p>
+                                  </div>
                                   <PositionBadge position={player.position} />
                                   <span className={cn("font-display text-lg", scoreColor(player.value.score))}>
                                     {player.value.score ?? "—"}
@@ -648,6 +658,11 @@ export default function LeaguePage() {
                       {Math.abs(entry.movement)} vs standings
                     </span>
                   )}
+                  {entry.espnProjectedRank ? (
+                    <span className="rounded-full border border-white/10 bg-slate-950/60 px-2 py-0.5 text-[11px] font-medium text-slate-400">
+                      ESPN projects #{entry.espnProjectedRank}
+                    </span>
+                  ) : null}
                 </div>
               ))}
               <p className="px-1 pt-1 text-xs text-slate-600">
@@ -734,7 +749,16 @@ function LineupCard({
   players: LeagueResponse["teams"][number]["players"];
   slots: Record<string, number>;
 }) {
-  const lineup = useMemo(() => optimalLineup(players, slots), [players, slots]);
+  const withEspnPpg = useMemo(
+    () =>
+      players.map((player) =>
+        player.espnSeason
+          ? { ...player, value: { ...player.value, ppg: player.espnSeason.ppg } }
+          : player
+      ),
+    [players]
+  );
+  const lineup = useMemo(() => optimalLineup(withEspnPpg, slots), [withEspnPpg, slots]);
   if (lineup.starters.length === 0) return null;
 
   return (
@@ -743,7 +767,9 @@ function LineupCard({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-300">
           Optimal lineup · {formatPts(lineup.projectedTotal)} projected pts
         </p>
-        <p className="text-[11px] text-slate-500">{lineup.bench.length} on bench</p>
+        <p className="text-[11px] text-slate-500">
+          {lineup.bench.length} on bench · ESPN scoring
+        </p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {lineup.starters.map((slot, index) => (

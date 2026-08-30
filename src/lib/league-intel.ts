@@ -43,6 +43,7 @@ export function powerRankings(teams: LeagueTeam[]): PowerRank[] {
       rank: 0,
       standingRank: standingIndex + 1,
       movement: 0,
+      espnProjectedRank: team.projectedRank,
     };
   });
 
