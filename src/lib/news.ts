@@ -13,6 +13,9 @@ const SOURCES = [
 
 const parser = new XMLParser({ ignoreAttributes: true });
 
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
 function stripHtml(input: string): string {
   let text = input.replace(/<[^>]*>/g, " ");
   for (let pass = 0; pass < 2; pass++) {
@@ -100,9 +103,55 @@ async function loadSource(source: { name: string; url: string }): Promise<NewsIt
   }
 }
 
+async function loadEspnApiNews(): Promise<NewsItem[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=50",
+      {
+        headers: { "user-agent": BROWSER_UA, accept: "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+      }
+    );
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      articles?: {
+        headline?: string;
+        description?: string;
+        published?: string;
+        links?: { web?: { href?: string } };
+      }[];
+    };
+    const items: NewsItem[] = [];
+    for (const article of json.articles ?? []) {
+      const title = stripHtml(article.headline ?? "");
+      if (!title) continue;
+      items.push({
+        id: `espn-api:${title.toLowerCase().replace(/\s+/g, "-")}`,
+        title,
+        link: article.links?.web?.href ?? "",
+        source: "ESPN",
+        publishedAt: article.published
+          ? new Date(article.published).toISOString()
+          : new Date(0).toISOString(),
+        summary: stripHtml(article.description ?? "").slice(0, 280),
+      });
+    }
+    return items;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchNews(): Promise<NewsItem[]> {
-  return getCached<NewsItem[]>("nfl_news_v2", NEWS_TTL, async () => {
-    const settled = await Promise.allSettled(SOURCES.map(loadSource));
+  return getCached<NewsItem[]>("nfl_news_v3", NEWS_TTL, async () => {
+    const loaders = SOURCES.map((source) => loadSource(source));
+    loaders.push(loadEspnApiNews());
+    const settled = await Promise.allSettled(loaders);
     const items = settled.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
     const seen = new Set<string>();
     const deduped = items.filter((item) => {
