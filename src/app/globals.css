@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-bebas), "Arial Narrow", ui-sans-serif, sans-serif;
+  --color-volt: #a3e635;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #020617;
+  color: #f1f5f9;
+  min-height: 100vh;
+}
+
+::selection {
+  background-color: rgba(163, 230, 53, 0.28);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+.field-lines {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent 78px,
+    rgba(148, 163, 184, 0.06) 78px,
+    rgba(148, 163, 184, 0.06) 80px
+  );
+}
+
+.hero-glow {
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(163, 230, 53, 0.13), transparent),
+    radial-gradient(ellipse 40% 30% at 85% 8%, rgba(56, 189, 248, 0.07), transparent);
+}
+
+.card-hover {
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(163, 230, 53, 0.35);
+}
+
+@keyframes pulse-bar {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.analyzing-bar {
+  animation: pulse-bar 1.2s ease-in-out infinite;
+}
