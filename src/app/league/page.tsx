@@ -24,6 +24,31 @@ interface StoredEspnCreds {
   swid: string;
 }
 
+function parseEspnCreds(rawS2: string, rawSwid: string): { s2?: string; swid?: string } {
+  const trimmedS2 = rawS2.trim();
+  const trimmedSwid = rawSwid.trim();
+  if (/espn_s2\s*=/i.test(trimmedS2)) {
+    let parsedS2 = "";
+    let parsedSwid = "";
+    for (const pair of trimmedS2.split(/;\s*/)) {
+      const eq = pair.indexOf("=");
+      if (eq === -1) continue;
+      const name = pair.slice(0, eq).trim().toLowerCase();
+      const value = pair.slice(eq + 1).trim();
+      if (name === "espn_s2") parsedS2 = value;
+      if (name === "swid") parsedSwid = value;
+    }
+    return {
+      s2: parsedS2 || undefined,
+      swid: parsedSwid || trimmedSwid || undefined,
+    };
+  }
+  return {
+    s2: trimmedS2 || undefined,
+    swid: trimmedSwid || undefined,
+  };
+}
+
 const TABS: { key: Tab; label: string }[] = [
   { key: "standings", label: "Standings" },
   { key: "trades", label: "Trade History" },
@@ -80,10 +105,11 @@ export default function LeaguePage() {
     let cancelled = false;
     setTradesLoading(true);
     setTradesError(null);
+    const creds = parseEspnCreds(s2, swid);
     fetch(`/api/espn-league/${data.league.id}/transactions`, {
       headers: {
-        ...(s2.trim() ? { "x-espn-s2": s2.trim() } : {}),
-        ...(swid.trim() ? { "x-espn-swid": swid.trim() } : {}),
+        ...(creds.s2 ? { "x-espn-s2": creds.s2 } : {}),
+        ...(creds.swid ? { "x-espn-swid": creds.swid } : {}),
       },
     })
       .then((res) => res.json())
@@ -113,13 +139,14 @@ export default function LeaguePage() {
     }
     setLoading(true);
     setError(null);
+    const creds = parseEspnCreds(s2, swid);
     try {
       let json: LeagueResponse & { error?: string };
       if (platform === "ESPN") {
         const res = await fetch(`/api/espn-league/${id}`, {
           headers: {
-            ...(s2.trim() ? { "x-espn-s2": s2.trim() } : {}),
-            ...(swid.trim() ? { "x-espn-swid": swid.trim() } : {}),
+            ...(creds.s2 ? { "x-espn-s2": creds.s2 } : {}),
+            ...(creds.swid ? { "x-espn-swid": creds.swid } : {}),
           },
         });
         json = (await res.json()) as LeagueResponse;
@@ -133,11 +160,11 @@ export default function LeaguePage() {
       setTradesError(null);
       setTab("standings");
       setExpandedTeam(stored?.leagueId === id ? stored.rosterId : null);
-      if (platform === "ESPN" && s2.trim()) {
+      if (platform === "ESPN" && creds.s2) {
         try {
           localStorage.setItem(
             "fft.espn",
-            JSON.stringify({ leagueId: id, s2: s2.trim(), swid: swid.trim() } as StoredEspnCreds)
+            JSON.stringify({ leagueId: id, s2: creds.s2, swid: creds.swid ?? "" } as StoredEspnCreds)
           );
         } catch {
         }
@@ -244,14 +271,22 @@ export default function LeaguePage() {
               <summary className="cursor-pointer font-semibold text-sky-300">
                 Private league? Get your ESPN cookies (one time, ~60 seconds)
               </summary>
-              <ol className="mt-2 list-decimal space-y-1 pl-4">
+              <p className="mt-2 font-semibold text-slate-300">Easiest way (Network tab):</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-4">
                 <li>Log into fantasy.espn.com in this browser</li>
-                <li>Press F12 and open the Application tab (Storage on Firefox)</li>
-                <li>Under Cookies, select fantasy.espn.com</li>
+                <li>Open your league page, then press F12 and go to the Network tab</li>
+                <li>Refresh the page, click the very first request, then Headers</li>
+                <li>Scroll to Request Headers, find <span className="text-sky-300">cookie:</span></li>
+                <li>Right-click its value and copy the entire string</li>
+                <li>Paste it into the espn_s2 box below — it will be parsed automatically</li>
+              </ol>
+              <p className="mt-2 font-semibold text-slate-300">Alternative (Application tab):</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-4">
+                <li>F12, Application tab, Cookies, fantasy.espn.com</li>
                 <li>
-                  Copy the value of <span className="text-sky-300">espn_s2</span> (very long
-                  string) and <span className="text-sky-300">SWID</span> (looks like
-                  {" {"}XXXXXXXX-...{"}"}) into the fields below
+                  Copy the full <span className="text-sky-300">espn_s2</span> value (it is long, make
+                  sure you get all of it) and <span className="text-sky-300">SWID</span> (looks like
+                  {" {"}XXXXXXXX-...{"}"})
                 </li>
               </ol>
               <p className="mt-2 text-[11px] text-slate-500">
@@ -262,7 +297,7 @@ export default function LeaguePage() {
             </details>
             <div>
               <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                espn_s2 cookie
+                espn_s2 cookie (or paste the whole cookie header here)
               </label>
               <textarea
                 value={s2}
