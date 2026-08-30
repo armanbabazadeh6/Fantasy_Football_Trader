@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { CountUp } from "@/components/count-up";
 import { NewsCard } from "@/components/news-card";
+import { NewsTicker } from "@/components/news-ticker";
 import { PlayerCard } from "@/components/player-card";
 import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/section-heading";
@@ -60,7 +61,8 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="field-lines hero-glow relative overflow-hidden border-b border-white/5">
+      <NewsTicker items={news} />
+      <section className="field-lines hero-glow stadium-lights relative overflow-hidden border-b border-white/5">
         <svg
           viewBox="0 0 64 64"
           className="animate-float absolute right-[12%] top-24 hidden w-40 opacity-[0.07] lg:block"
@@ -75,7 +77,7 @@ export default async function HomePage() {
           />
           <path d="M28 30 L36 38" stroke="#020617" strokeWidth="2.6" strokeLinecap="round" />
         </svg>
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
           <p
             className="animate-fade-up mb-4 inline-flex items-center gap-2 rounded-full border border-volt/30 bg-volt/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-volt"
             style={{ animationDelay: "0ms" }}

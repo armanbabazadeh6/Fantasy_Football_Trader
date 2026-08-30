@@ -23,7 +23,8 @@ export function SectionHeading({
           {Icon && <Icon className="h-5 w-5 text-volt" />}
           {title}
         </h2>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+        <div className="heading-underline mt-1.5" />
+        {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {action}
     </div>

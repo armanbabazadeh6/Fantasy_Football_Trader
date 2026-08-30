@@ -150,7 +150,7 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
             {rows.map((player, index) => (
               <tr
                 key={player.id}
-                className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]"
+                className="value-row-hover border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]"
               >
                 <td className="py-2.5 pl-4 pr-2 text-slate-600">
                   {safePage * PAGE_SIZE + index + 1}

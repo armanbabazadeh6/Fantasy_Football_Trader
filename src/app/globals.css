@@ -241,6 +241,90 @@ body {
   pointer-events: none;
 }
 
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes lights-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes underline-draw {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.ticker-mask {
+  mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  gap: 2.5rem;
+  padding-left: 2.5rem;
+  animation: ticker-scroll 75s linear infinite;
+}
+
+.ticker-paused:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.stadium-lights {
+  position: relative;
+}
+
+.stadium-lights::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(163, 230, 53, 0.05) 12deg,
+    transparent 26deg,
+    transparent 170deg,
+    rgba(56, 189, 248, 0.04) 182deg,
+    transparent 196deg,
+    transparent 350deg,
+    rgba(163, 230, 53, 0.03) 358deg,
+    transparent 360deg
+  );
+  animation: lights-rotate 45s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heading-underline {
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(163, 230, 53, 0.7), transparent 70%);
+  animation: underline-draw 0.8s ease 0.25s both;
+}
+
+.value-row-hover {
+  transition: box-shadow 120ms ease;
+}
+
+.value-row-hover:hover {
+  box-shadow: inset 3px 0 0 #a3e635;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
