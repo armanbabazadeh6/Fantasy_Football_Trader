@@ -270,8 +270,7 @@ function SortButton({
       <ChevronDown
         className={cn(
           "h-3.5 w-3.5 transition-transform",
-          active ? (dir === "asc" ? "rotate-180" : "") : "opacity-30",
-          active && dir === "asc" ? "rotate-180" : ""
+          active ? (dir === "asc" ? "rotate-180" : "") : "opacity-30"
         )}
       />
     </button>

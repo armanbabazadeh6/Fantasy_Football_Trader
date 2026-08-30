@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320">
+  <rect width="1280" height="320" fill="#020617"/>
+  <g opacity="0.55">
+    <rect x="160" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="320" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="480" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="640" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="800" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="960" y="0" width="1" height="320" fill="#1e293b"/>
+    <rect x="1120" y="0" width="1" height="320" fill="#1e293b"/>
+  </g>
+  <ellipse cx="1120" cy="235" rx="130" ry="82" transform="rotate(-40 1120 235)" fill="#a3e635" opacity="0.95"/>
+  <g stroke="#020617" stroke-width="7" stroke-linecap="round">
+    <path d="M1085 215 L1102 232"/>
+    <path d="M1102 215 L1085 232"/>
+    <path d="M1112 245 L1129 262"/>
+    <path d="M1129 245 L1112 262"/>
+    <path d="M1098 240 L1130 272"/>
+  </g>
+  <text x="72" y="150" font-family="Arial, Helvetica, sans-serif" font-size="84" font-weight="900" fill="#f1f5f9" letter-spacing="2">FANTASY FOOTBALL</text>
+  <text x="72" y="238" font-family="Arial, Helvetica, sans-serif" font-size="84" font-weight="900" fill="#a3e635" letter-spacing="2">TRADER</text>
+  <text x="76" y="282" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#94a3b8" letter-spacing="1.5">AI-POWERED TRADE ANALYSIS WITH REAL NFL DATA</text>
+</svg>
