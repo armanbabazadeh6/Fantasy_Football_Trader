@@ -6,6 +6,7 @@ import type {
   PowerRank,
   TradePartner,
   TradePartnerTarget,
+  TradeProposal,
 } from "@/types";
 
 function normalize(values: number[]): (value: number) => number {
@@ -174,4 +175,92 @@ export function optimalLineup(
     bench,
     projectedTotal: Math.round(projectedTotal * 10) / 10,
   };
+}
+
+const UPGRADE_THRESHOLD = 3;
+
+export function proposeTrades(
+  teams: LeagueTeam[],
+  myRosterId: number
+): TradeProposal[] {
+  const me = teams.find((team) => team.rosterId === myRosterId);
+  if (!me) return [];
+  const myGroups = groupByPosition(me.players);
+
+  const isOfferable = (player: PlayerSummary): boolean => {
+    const mine = player.value.score ?? 0;
+    if (mine < 40) return false;
+    const others = (myGroups.get(player.position) ?? []).filter(
+      (p) => p.id !== player.id
+    );
+    const bestOther = others[0]?.value.score ?? -1;
+    return bestOther >= mine - 12;
+  };
+  const myOfferables = me.players
+    .filter(isOfferable)
+    .sort((a, b) => (a.value.score ?? 0) - (b.value.score ?? 0));
+
+  const proposals: TradeProposal[] = [];
+  const usedTargets = new Set<string>();
+
+  for (const team of teams) {
+    if (team.rosterId === myRosterId) continue;
+    const theirGroups = groupByPosition(team.players);
+
+    for (const position of CORE_POSITIONS) {
+      const group = theirGroups.get(position) ?? [];
+      const surplus = group.filter((p) => (p.value.score ?? 0) >= 50).slice(1);
+      const target = surplus[0];
+      if (!target || usedTargets.has(target.id)) continue;
+
+      const myBest = myGroups.get(position)?.[0];
+      const myBestScore = myBest?.value.score ?? 0;
+      const targetScore = target.value.score ?? 0;
+      if (targetScore < myBestScore + UPGRADE_THRESHOLD) continue;
+
+      const single = myOfferables.find(
+        (p) =>
+          p.position !== position &&
+          Math.abs((p.value.score ?? 0) - targetScore) <= 10
+      );
+      if (single) {
+        usedTargets.add(target.id);
+        proposals.push({
+          partnerRosterId: team.rosterId,
+          partnerTeam: team.teamName,
+          youGive: [single],
+          youGet: [target],
+          giveValue: single.value.score ?? 0,
+          getValue: targetScore,
+          rationale: `${target.name} (${targetScore}) upgrades your ${position} over ${myBest?.name ?? "your current option"} (${myBestScore}). ${team.teamName} can spare him behind ${group[0].name}.`,
+        });
+        continue;
+      }
+
+      let foundPair = false;
+      for (let i = 0; i < myOfferables.length && !foundPair; i++) {
+        for (let j = i + 1; j < myOfferables.length && !foundPair; j++) {
+          const a = myOfferables[i];
+          const b = myOfferables[j];
+          if (a.position === position || b.position === position) continue;
+          const sum = (a.value.score ?? 0) + (b.value.score ?? 0);
+          if (Math.abs(sum - targetScore) <= 10) {
+            usedTargets.add(target.id);
+            proposals.push({
+              partnerRosterId: team.rosterId,
+              partnerTeam: team.teamName,
+              youGive: [a, b],
+              youGet: [target],
+              giveValue: Math.round(sum),
+              getValue: targetScore,
+              rationale: `Package deal for ${target.name} (${targetScore}) — a ${position} upgrade over ${myBest?.name ?? "your current option"} (${myBestScore}). ${team.teamName} keeps ${group[0].name}.`,
+            });
+            foundPair = true;
+          }
+        }
+      }
+    }
+  }
+
+  return proposals.sort((a, b) => b.getValue - a.getValue).slice(0, 6);
 }

@@ -4,9 +4,9 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Link2, Loader2, Trophy, UserPlus } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
-import { findTradePartners, optimalLineup, powerRankings } from "@/lib/league-intel";
+import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
 import { cn, formatPts, relativeTime, scoreColor } from "@/lib/utils";
-import type { LeagueResponse, LeagueTrade, TradesResponse } from "@/types";
+import type { LeagueResponse, LeagueTrade, TradeProposal, TradesResponse } from "@/types";
 
 type Platform = "ESPN" | "SLEEPER";
 type Tab = "standings" | "trades" | "power" | "partners";
@@ -224,6 +224,26 @@ export default function LeaguePage() {
         : [],
     [data, stored]
   );
+  const proposals = useMemo(
+    () =>
+      data && stored?.leagueId === data.league.id
+        ? proposeTrades(data.teams, stored.rosterId)
+        : [],
+    [data, stored]
+  );
+  const [copiedProposal, setCopiedProposal] = useState<number | null>(null);
+
+  async function copyProposalText(proposal: TradeProposal, index: number) {
+    const give = proposal.youGive.map((p) => p.name).join(" + ");
+    const get = proposal.youGet.map((p) => p.name).join(" + ");
+    const text = `Trade offer — I'll give you ${give} for ${get}?`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedProposal(index);
+      setTimeout(() => setCopiedProposal(null), 2500);
+    } catch {
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -672,54 +692,117 @@ export default function LeaguePage() {
           )}
 
           {tab === "partners" && (
-            <div className="space-y-3">
+            <div className="space-y-6">
               {stored?.leagueId !== data.league.id && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-300">
-                  Pick &quot;Use my team&quot; on the Standings tab first so partner matching
-                  knows your roster.
+                  Pick &quot;Use my team&quot; on the Standings tab first so the trade
+                  engine knows your roster.
                 </p>
               )}
-              {stored?.leagueId === data.league.id && partners.length === 0 && (
-                <div className="rounded-xl border border-white/5 bg-slate-900/60 px-5 py-10 text-center text-sm text-slate-500">
-                  {findTradePartners(data.teams, stored.rosterId).length === 0 && stored
-                    ? "No obvious surplus/need matches right now — your roster is either balanced or dominant everywhere."
-                    : ""}
-                </div>
-              )}
-              {partners.map((partner) => (
-                <div
-                  key={partner.rosterId}
-                  className="rounded-xl border border-white/5 bg-slate-900/60 p-5"
-                >
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-display text-xl tracking-wide text-slate-100">
-                      {partner.teamName}
-                    </p>
-                    {partner.theirNeeds.length > 0 && (
+              {stored?.leagueId === data.league.id && (
+                <>
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-display text-2xl tracking-wide text-slate-100">
+                        AUTO-PROPOSED DEALS
+                      </h3>
                       <p className="text-xs text-slate-500">
-                        They could use: {partner.theirNeeds.join(", ")}
+                        Value-balanced offers generated from needs and surpluses
                       </p>
+                    </div>
+                    {proposals.length === 0 ? (
+                      <p className="rounded-xl border border-white/5 bg-slate-900/60 px-5 py-8 text-center text-sm text-slate-500">
+                        No clean value-balanced upgrades found right now — your roster is
+                        either complete or the league lacks spare starters.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {proposals.map((proposal, index) => (
+                          <div
+                            key={`${proposal.partnerRosterId}-${proposal.youGet[0]?.id ?? index}`}
+                            style={{ animationDelay: `${index * 90}ms` }}
+                            className="animate-fade-up rounded-xl border border-volt/20 bg-slate-900/60 p-5"
+                          >
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="min-w-[220px] flex-1 rounded-lg border border-rose-500/25 bg-rose-500/5 px-4 py-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                                  You give
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-100">
+                                  {proposal.youGive.map((p) => `${p.name} (${p.value.score ?? "—"})`).join(" + ")}
+                                </p>
+                              </div>
+                              <span className="font-display text-xl text-slate-600">for</span>
+                              <div className="min-w-[220px] flex-1 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                                  You get from {proposal.partnerTeam}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-100">
+                                  {proposal.youGet.map((p) => `${p.name} (${p.value.score ?? "—"})`).join(" + ")}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                              {proposal.rationale}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => copyProposalText(proposal, index)}
+                              className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3.5 py-1.5 text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
+                            >
+                              {copiedProposal === index ? "Copied to clipboard" : "Copy offer text"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    {partner.targets.map((target) => (
-                      <div
-                        key={`${partner.rosterId}-${target.position}-${target.targetName}`}
-                        className="flex flex-wrap items-center gap-3 rounded-lg border border-volt/20 bg-volt/5 px-4 py-2.5"
-                      >
-                        <PositionBadge position={target.position} />
-                        <span className="text-sm font-semibold text-slate-100">
-                          {target.targetName}
-                        </span>
-                        <span className="font-display text-lg text-volt">{target.targetScore}</span>
-                        <span className="ml-auto text-xs text-slate-500">
-                          stuck behind {target.blockedBy}
-                        </span>
+
+                  {partners.length > 0 && (
+                    <div>
+                      <h3 className="mb-3 font-display text-2xl tracking-wide text-slate-100">
+                        SURPLUS MATCHES
+                      </h3>
+                      <div className="space-y-3">
+                        {partners.map((partner) => (
+                          <div
+                            key={partner.rosterId}
+                            className="rounded-xl border border-white/5 bg-slate-900/60 p-5"
+                          >
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-display text-xl tracking-wide text-slate-100">
+                                {partner.teamName}
+                              </p>
+                              {partner.theirNeeds.length > 0 && (
+                                <p className="text-xs text-slate-500">
+                                  They could use: {partner.theirNeeds.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              {partner.targets.map((target) => (
+                                <div
+                                  key={`${partner.rosterId}-${target.position}-${target.targetName}`}
+                                  className="flex flex-wrap items-center gap-3 rounded-lg border border-volt/20 bg-volt/5 px-4 py-2.5"
+                                >
+                                  <PositionBadge position={target.position} />
+                                  <span className="text-sm font-semibold text-slate-100">
+                                    {target.targetName}
+                                  </span>
+                                  <span className="font-display text-lg text-volt">{target.targetScore}</span>
+                                  <span className="ml-auto text-xs text-slate-500">
+                                    stuck behind {target.blockedBy}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
           </div>

@@ -233,6 +233,16 @@ export interface TradePartner {
   targets: TradePartnerTarget[];
 }
 
+export interface TradeProposal {
+  partnerRosterId: number;
+  partnerTeam: string;
+  youGive: PlayerSummary[];
+  youGet: PlayerSummary[];
+  giveValue: number;
+  getValue: number;
+  rationale: string;
+}
+
 export interface LineupSlot {
   slot: string;
   player: PlayerSummary | null;

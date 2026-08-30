@@ -4,7 +4,7 @@ import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/n
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
-import { findTradePartners, optimalLineup, powerRankings } from "@/lib/league-intel";
+import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
 import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import type { LeagueTeam, PlayerSummary } from "@/types";
 import {
@@ -239,6 +239,37 @@ async function unitTests(): Promise<void> {
     lineup.starters.find((s) => s.slot === "K")?.player === null &&
       lineup.projectedTotal > 0,
     `projected ${lineup.projectedTotal}`
+  );
+
+  const me = makeTeam(4, "Proposer", [
+    makePlayer("p1", "Start WR", "WR", 70, 18),
+    makePlayer("p2", "Bench WR", "WR", 62, 14),
+    makePlayer("p3", "Starter QB", "QB", 50, 17),
+    makePlayer("p4", "Thin RB", "RB", 35, 8),
+  ]);
+  const them = makeTeam(5, "RB Factory", [
+    makePlayer("p5", "Elite RB", "RB", 92, 23),
+    makePlayer("p6", "Backup RB", "RB", 68, 15),
+    makePlayer("p7", "Their QB", "QB", 30, 10),
+  ]);
+  const suggested = proposeTrades([me, them], 4);
+  check(
+    "trade proposer generates value-balanced upgrade",
+    suggested.length === 1 &&
+      suggested[0].youGive[0]?.name === "Bench WR" &&
+      suggested[0].youGet[0]?.name === "Backup RB" &&
+      Math.abs(suggested[0].giveValue - suggested[0].getValue) <= 10,
+    suggested.length
+      ? `${suggested[0].youGive.map((p) => p.name).join("+")} for ${suggested[0].youGet.map((p) => p.name).join("+")}`
+      : "none"
+  );
+  const noDepth = makeTeam(6, "No Depth", [
+    makePlayer("q1", "Solo WR", "WR", 80, 20),
+    makePlayer("q2", "Solo RB", "RB", 80, 20),
+  ]);
+  check(
+    "trade proposer stays quiet with nothing spare to offer",
+    proposeTrades([noDepth, them], 6).length === 0
   );
 }
 
