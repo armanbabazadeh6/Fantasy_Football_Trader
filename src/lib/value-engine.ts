@@ -1,5 +1,4 @@
 import type {
-  EngineResult,
   NFLPlayer,
   PlayerBundle,
   PlayerSeasonAgg,

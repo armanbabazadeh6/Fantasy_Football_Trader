@@ -143,8 +143,9 @@ function normalizeStatPayload(raw: unknown): Record<string, StatRow> {
         const record = row as Record<string, unknown>;
         const playerId = record.player_id;
         if (typeof playerId === "string" && playerId !== "0") {
-          const { player_id, ...stats } = record;
-          out[player_id] = projectRow(stats);
+          const stats = { ...record };
+          delete stats.player_id;
+          out[playerId] = projectRow(stats);
         }
       }
     }
@@ -154,9 +155,13 @@ function normalizeStatPayload(raw: unknown): Record<string, StatRow> {
     for (const [playerId, stats] of Object.entries(raw as Record<string, unknown>)) {
       if (!stats || typeof stats !== "object") continue;
       const record = stats as Record<string, unknown>;
-      if (typeof record.player_id === "string") {
-        const { player_id, ...rest } = record;
-        if (player_id !== "0") out[player_id] = projectRow(rest);
+      const rowPlayerId = record.player_id;
+      if (typeof rowPlayerId === "string") {
+        if (rowPlayerId !== "0") {
+          const projected = { ...record };
+          delete projected.player_id;
+          out[rowPlayerId] = projectRow(projected);
+        }
       } else {
         out[playerId] = projectRow(record);
       }
