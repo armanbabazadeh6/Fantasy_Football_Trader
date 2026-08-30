@@ -28,8 +28,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${inter.variable} ${bebas.variable} bg-slate-950 font-sans text-slate-100 antialiased`}
       >
         <SiteHeader />
