@@ -161,7 +161,105 @@ export interface LeagueResponse {
     season: string;
     totalRosters: number;
     scoringLabel: string;
+    rosterSlots?: Record<string, number>;
   };
   teams: LeagueTeam[];
   unmatched?: string[];
+}
+
+export interface TradeSidePlayer {
+  name: string;
+  position: string;
+  team: string | null;
+  valueScore: number | null;
+}
+
+export interface LeagueTradeTeam {
+  teamId: number;
+  teamName: string;
+  incoming: TradeSidePlayer[];
+  outgoing: TradeSidePlayer[];
+  netValue: number;
+}
+
+export interface LeagueTrade {
+  id: number;
+  date: string;
+  status: string;
+  teams: LeagueTradeTeam[];
+  winnerTeamId: number | null;
+  maxNet: number;
+}
+
+export interface TradesResponse {
+  ok: boolean;
+  error?: string;
+  trades: LeagueTrade[];
+}
+
+export interface PowerRank {
+  rosterId: number;
+  teamName: string;
+  record: string;
+  totalValue: number;
+  topPlayers: string[];
+  powerScore: number;
+  rank: number;
+  standingRank: number;
+  movement: number;
+}
+
+export interface TradePartnerTarget {
+  position: string;
+  targetName: string;
+  targetScore: number;
+  blockedBy: string;
+}
+
+export interface TradePartner {
+  rosterId: number;
+  teamName: string;
+  theirNeeds: string[];
+  targets: TradePartnerTarget[];
+}
+
+export interface LineupSlot {
+  slot: string;
+  player: PlayerSummary | null;
+  ppg: number | null;
+}
+
+export interface OptimalLineup {
+  starters: LineupSlot[];
+  bench: PlayerSummary[];
+  projectedTotal: number;
+}
+
+export interface EspnRawPlayer {
+  id?: number;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  position?: string;
+  proTeam?: string;
+  proTeamId?: number;
+  injuryStatus?: string;
+}
+
+export interface EspnRawTeam {
+  id?: number;
+  location?: string;
+  nickname?: string;
+  abbrev?: string;
+  record?: {
+    overall?: {
+      wins?: number;
+      losses?: number;
+      ties?: number;
+      pointsFor?: number;
+    };
+  };
+  roster?: {
+    entries?: { playerPoolEntry?: { player?: EspnRawPlayer } }[];
+  };
 }
