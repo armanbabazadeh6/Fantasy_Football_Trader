@@ -2,6 +2,8 @@ import { fetchAllPlayers, fetchWeeklyStats, fetchTrending, statSeasons } from "@
 import { aggregateSeason, extractPPR } from "@/lib/fantasy";
 import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/nfl-data";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
+import { fetchTeamByeWeeks } from "@/lib/schedule";
+import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import {
   computeNeeds,
   computePlayerValue,
@@ -121,6 +123,21 @@ async function unitTests(): Promise<void> {
   check("ruleVerdict small loss = LEAN_DECLINE", ruleVerdict(80, 72) === "LEAN_DECLINE");
   check("ruleVerdict even = FAIR", ruleVerdict(70, 70) === "FAIR");
   check("ruleVerdict big loss = DECLINE", ruleVerdict(80, 50) === "DECLINE");
+
+  check(
+    "espn name normalization handles hyphens, punctuation, and suffixes",
+    normalizeNameKey("Amon-Ra St. Brown Jr.") === "amonrastbrown" &&
+      normalizeNameKey("Amon Ra St. Brown") === normalizeNameKey("Amon-Ra St. Brown") &&
+      normalizeNameKey("D.J. Moore") === normalizeNameKey("DJ Moore")
+  );
+  check(
+    "espn position normalization handles D/ST",
+    normalizeEspnPosition("D/ST") === "DEF" && normalizeEspnPosition("WR") === "WR"
+  );
+  check(
+    "espn team abbreviation maps WSH to WAS",
+    espnTeamToSleeper("WSH") === "WAS" && espnTeamToSleeper("KC") === "KC"
+  );
 }
 
 async function integrationTests(): Promise<void> {
@@ -213,6 +230,16 @@ async function integrationTests(): Promise<void> {
 
   const summaries = await getPlayerSummaries();
   check("player summaries sorted by value", summaries.length > 1000 && (summaries[0]?.value.score ?? -1) >= (summaries[50]?.value.score ?? -1), `total=${summaries.length}, top=${summaries[0]?.name} (${summaries[0]?.value.score})`);
+  const withByes = summaries.filter((p) => p.byeWeek);
+  check("bye weeks attached to summaries", withByes.length > 200, `${withByes.length} players carry a bye week`);
+
+  const byes = await fetchTeamByeWeeks();
+  const byeValues = Object.values(byes);
+  check(
+    "bye week map covers teams and valid weeks",
+    Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
+    `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
+  );
 }
 
 async function main(): Promise<void> {
