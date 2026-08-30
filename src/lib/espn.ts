@@ -82,7 +82,7 @@ const ESPN_SLOT_MAP: Record<string, string> = {
   "6": "TE",
   "7": "FLEX",
   "16": "K",
-  "20": "DEF",
+  "17": "DEF",
   "23": "FLEX",
 };
 
@@ -100,6 +100,35 @@ export function espnProTeamToAbbr(player: EspnRawPlayer): string | null {
     return mapped ? espnTeamToSleeper(mapped) : null;
   }
   return null;
+}
+
+const ESPN_POSITION_IDS: Record<number, string> = {
+  1: "QB",
+  2: "RB",
+  3: "WR",
+  4: "TE",
+  5: "K",
+  16: "DEF",
+};
+
+export function espnTeamName(team: EspnRawTeam): string {
+  if (team.name && team.name.trim().length > 0) return team.name.trim();
+  const legacy = `${team.location ?? ""} ${team.nickname ?? ""}`.trim();
+  if (legacy.length > 0) return legacy;
+  return team.abbrev || `Team ${team.id ?? "?"}`;
+}
+
+export function resolveEspnPosition(player: EspnRawPlayer): string {
+  if (player.position && player.position.trim().length > 0) {
+    return normalizeEspnPosition(player.position);
+  }
+  if (typeof player.defaultPositionId === "number") {
+    return ESPN_POSITION_IDS[player.defaultPositionId] ?? "";
+  }
+  if (typeof player.positionId === "number") {
+    return ESPN_POSITION_IDS[player.positionId] ?? "";
+  }
+  return "";
 }
 
 export function normalizeEspnPosition(position?: string): string {
@@ -175,6 +204,12 @@ async function espnFetchJson(
   }
 }
 
+interface EspnScoringSettings {
+  playerRankType?: string;
+  scoringItems?: { statId?: number; points?: number }[];
+  items?: { statId?: number; value?: number }[];
+}
+
 function parseRosterSlots(json: Record<string, unknown>): Record<string, number> | undefined {
   const settings = json.settings as { rosterSettings?: { lineupSlotCounts?: Record<string, number> } } | undefined;
   const counts = settings?.rosterSettings?.lineupSlotCounts;
@@ -203,23 +238,28 @@ export async function fetchEspnLeague(
   if (teams.length === 0) {
     throw new Error("ESPN returned no teams for this league.");
   }
-  const scoringItems = (
-    json.settings as
-      | { scoringSettings?: { items?: { statId?: number; value?: number }[] } }
-      | undefined
-  )?.scoringSettings?.items;
-  const recItem = scoringItems?.find(
-    (item) => item.statId === 24 && typeof item.value === "number"
-  );
-  const recValue = recItem?.value ?? null;
-  const scoringLabel =
-    recValue === null
-      ? "Custom scoring"
-      : recValue >= 1
-        ? "Full PPR"
-        : recValue > 0
-          ? "Half PPR"
-          : "Standard";
+  const scoring = (json.settings as
+    | { scoringSettings?: EspnScoringSettings }
+    | undefined)?.scoringSettings;
+  const items = (scoring?.scoringItems ?? scoring?.items ?? []) as {
+    statId?: number;
+    points?: number;
+    value?: number;
+  }[];
+  const receptions = items.find((item) => item.statId === 24);
+  const recPoints = receptions?.points ?? receptions?.value ?? null;
+  let scoringLabel: string;
+  if (recPoints !== null) {
+    scoringLabel = recPoints >= 1 ? "Full PPR" : recPoints > 0 ? "Half PPR" : "Standard";
+  } else {
+    const rankType = (scoring?.playerRankType ?? "").toUpperCase();
+    scoringLabel =
+      rankType === "PPR"
+        ? "PPR"
+        : rankType === "STD" || rankType === "STANDARD"
+          ? "Standard"
+          : "Custom scoring";
+  }
   return {
     name: (json.settings as { name?: string } | undefined)?.name ?? `League ${leagueId}`,
     teams,
@@ -272,11 +312,12 @@ export function matchEspnPlayer(
 ): NFLPlayer | null {
   const name = espnPlayerName(player);
   if (!name) return null;
-  const position = normalizeEspnPosition(player.position);
+  const position = resolveEspnPosition(player);
   const teamAbbr = espnProTeamToAbbr(player);
   if (position === "DEF") {
     return teamAbbr ? indexes.defByTeam.get(teamAbbr) ?? null : null;
   }
+  if (!position) return null;
   const candidates = indexes.byNamePos.get(`${normalizeNameKey(name)}|${position}`) ?? [];
   if (candidates.length === 1) return candidates[0];
   if (candidates.length > 1) {
@@ -342,7 +383,7 @@ export async function mapEspnLeagueToSleeper(
       if (matched) {
         players.push(toPlayerSummary(matched, computed));
       } else {
-        unmatched.push(`${name} (${normalizeEspnPosition(espnPlayer.position)})`);
+        unmatched.push(`${name} (${resolveEspnPosition(espnPlayer)})`);
       }
     }
 
@@ -350,7 +391,7 @@ export async function mapEspnLeagueToSleeper(
 
     return {
       rosterId: team.id ?? 0,
-      teamName: `${team.location ?? ""} ${team.nickname ?? ""}`.trim() || team.abbrev || `Team ${team.id}`,
+      teamName: espnTeamName(team),
       displayName: team.abbrev ?? "",
       wins: team.record?.overall?.wins ?? 0,
       losses: team.record?.overall?.losses ?? 0,

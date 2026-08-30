@@ -241,6 +241,8 @@ export interface EspnRawPlayer {
   firstName?: string;
   lastName?: string;
   position?: string;
+  positionId?: number;
+  defaultPositionId?: number;
   proTeam?: string;
   proTeamId?: number;
   injuryStatus?: string;
@@ -248,6 +250,7 @@ export interface EspnRawPlayer {
 
 export interface EspnRawTeam {
   id?: number;
+  name?: string;
   location?: string;
   nickname?: string;
   abbrev?: string;

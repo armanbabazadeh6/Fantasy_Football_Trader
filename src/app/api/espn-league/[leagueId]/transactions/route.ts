@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildSleeperIndexes,
   espnPlayerName,
+  espnTeamName,
   fetchEspnLeague,
   fetchEspnTransactions,
   matchEspnPlayer,
-  normalizeEspnPosition,
+  resolveEspnPosition,
   type EspnTransaction,
   type EspnTransactionItem,
   type SleeperIndexes,
@@ -49,7 +50,7 @@ function parseTrade(
 
     const sidePlayer: TradeSidePlayer = {
       name: espnPlayerName(player) || "Unknown player",
-      position: normalizeEspnPosition(player.position),
+      position: resolveEspnPosition(player),
       team: player.proTeam ?? null,
       valueScore: valueOf(player),
     };
@@ -130,12 +131,7 @@ export async function GET(
     const teamNames = new Map<number, string>();
     for (const team of espnLeague.teams) {
       if (typeof team.id === "number") {
-        teamNames.set(
-          team.id,
-          `${team.location ?? ""} ${team.nickname ?? ""}`.trim() ||
-            team.abbrev ||
-            `Team ${team.id}`
-        );
+        teamNames.set(team.id, espnTeamName(team));
       }
     }
 
