@@ -28,6 +28,7 @@ function compactBundle(bundle: PlayerBundle) {
       bust_rate: s.bustRate,
     })),
     trending_adds_24h: bundle.trendCount ?? 0,
+    bye_week: bundle.byeWeek ?? null,
     recent_news: bundle.news.map((n) => `[${n.source}] ${n.title}`),
   };
 }

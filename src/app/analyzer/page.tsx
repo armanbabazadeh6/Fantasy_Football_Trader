@@ -691,6 +691,11 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
                 Trending +
               </span>
             ) : null}
+            {bundle.byeWeek ? (
+              <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                Bye W{bundle.byeWeek}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-right">

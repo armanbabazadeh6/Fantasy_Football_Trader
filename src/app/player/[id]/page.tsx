@@ -46,6 +46,10 @@ export default async function PlayerPage({
     { label: "Status", value: player.status || "—" },
   ];
 
+  if (summary.byeWeek) {
+    metaChips.push({ label: "Bye week", value: `Week ${summary.byeWeek}` });
+  }
+
   if (player.injuryStatus) {
     metaChips.push({
       label: "Injury",

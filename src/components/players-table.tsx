@@ -135,6 +135,7 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
               <th className="px-2 py-3 text-right font-semibold">
                 <SortButton label="Rank" active={sortKey === "posRank"} dir={sortDir} onClick={() => toggleSort("posRank")} />
               </th>
+              <th className="px-2 py-3 text-center font-semibold">Bye</th>
               <th className="px-2 py-3 text-right font-semibold">
                 <SortButton label="Age" active={sortKey === "age"} dir={sortDir} onClick={() => toggleSort("age")} />
               </th>
@@ -189,6 +190,9 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
                   {player.posRank ? `#${player.posRank}` : "—"}
+                </td>
+                <td className="px-2 py-2.5 text-center tabular-nums text-slate-400">
+                  {player.byeWeek ? `W${player.byeWeek}` : "—"}
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
                   {player.age ?? "—"}

@@ -1,6 +1,7 @@
 import { getCached } from "./cache";
 import { fetchNews, matchNewsForPlayer } from "./news";
 import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, statSeasons } from "./sleeper";
+import { fetchTeamByeWeeks } from "./schedule";
 import { aggregateSeason } from "./fantasy";
 import { computePlayerValue } from "./value-engine";
 import type {
@@ -120,8 +121,14 @@ function toSummary(entry: ComputedPlayer): PlayerSummary {
 }
 
 export async function getPlayerSummaries(): Promise<PlayerSummary[]> {
-  const map = await computeAllPlayers();
-  const summaries = Array.from(map.values()).map(toSummary);
+  const [map, byes] = await Promise.all([computeAllPlayers(), fetchTeamByeWeeks()]);
+  const summaries = Array.from(map.values()).map((entry) => {
+    const summary = toSummary(entry);
+    if (entry.player.team && byes[entry.player.team]) {
+      summary.byeWeek = byes[entry.player.team];
+    }
+    return summary;
+  });
   summaries.sort((a, b) => {
     const av = a.value.score ?? -1;
     const bv = b.value.score ?? -1;
@@ -175,16 +182,24 @@ export async function getTrendingSummaries(limit = 20): Promise<PlayerSummary[]>
 
 export async function getPlayerBundles(ids: string[]): Promise<PlayerBundle[]> {
   if (ids.length === 0) return [];
-  const [computed, news] = await Promise.all([computeAllPlayers(), fetchNews()]);
+  const [computed, news, byes] = await Promise.all([
+    computeAllPlayers(),
+    fetchNews(),
+    fetchTeamByeWeeks(),
+  ]);
   const bundles: PlayerBundle[] = [];
   for (const id of ids) {
     const entry = computed.get(id);
     if (!entry) continue;
-    bundles.push({
+    const bundle: PlayerBundle = {
       ...toSummary(entry),
       seasons: entry.aggs,
       news: matchNewsForPlayer(news, entry.player, 3),
-    });
+    };
+    if (entry.player.team && byes[entry.player.team]) {
+      bundle.byeWeek = byes[entry.player.team];
+    }
+    bundles.push(bundle);
   }
   return bundles;
 }
@@ -198,11 +213,19 @@ export interface PlayerDetailData {
 }
 
 export async function getPlayerDetail(id: string): Promise<PlayerDetailData | null> {
-  const [computed, news] = await Promise.all([computeAllPlayers(), fetchNews()]);
+  const [computed, news, byes] = await Promise.all([
+    computeAllPlayers(),
+    fetchNews(),
+    fetchTeamByeWeeks(),
+  ]);
   const entry = computed.get(id);
   if (!entry) return null;
+  const summary = toSummary(entry);
+  if (entry.player.team && byes[entry.player.team]) {
+    summary.byeWeek = byes[entry.player.team];
+  }
   return {
-    summary: toSummary(entry),
+    summary,
     player: entry.player,
     seasons: entry.aggs,
     news: matchNewsForPlayer(news, entry.player, 12, 120),

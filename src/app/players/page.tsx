@@ -20,6 +20,7 @@ export default async function PlayersPage() {
     rookie: p.rookie,
     posRank: p.posRank,
     trendCount: p.trendCount,
+    byeWeek: p.byeWeek,
     value: {
       score: p.value.score,
       tier: p.value.tier,
