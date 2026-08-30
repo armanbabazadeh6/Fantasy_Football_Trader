@@ -302,8 +302,40 @@ export default function LeaguePage() {
         </p>
       )}
 
+      <div className="mt-6">
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {TABS.map((t) => {
+            const available = Boolean(data) && (t.key !== "trades" || data?.platform === "ESPN");
+            return (
+              <button
+                key={t.key}
+                type="button"
+                disabled={!available}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "rounded-lg border px-3.5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+                  tab === t.key && available
+                    ? "border-volt/40 bg-volt/10 text-volt"
+                    : available
+                      ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
+                      : "cursor-not-allowed border-white/5 text-slate-700"
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        {!data && (
+          <p className="px-1 text-xs text-slate-600">
+            Load a league above to unlock standings, trade history, power rankings,
+            trade partners, and optimal lineups.
+          </p>
+        )}
+      </div>
+
       {data && (
-        <div className="mt-8">
+        <div className="mt-4">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <h2 className="font-display text-2xl tracking-wide text-slate-100">
               {data.league.name}
@@ -324,24 +356,6 @@ export default function LeaguePage() {
               {data.unmatched.length > 8 ? ", ..." : ""}. They were skipped in value totals.
             </p>
           )}
-
-          <div className="mb-5 flex flex-wrap gap-1.5">
-            {TABS.filter((t) => t.key !== "trades" || data.platform === "ESPN").map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  "rounded-lg border px-3.5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-                  tab === t.key
-                    ? "border-volt/40 bg-volt/10 text-volt"
-                    : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
 
           {tab === "standings" && (
             <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
