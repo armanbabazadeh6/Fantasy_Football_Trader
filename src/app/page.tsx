@@ -12,6 +12,7 @@ import {
 import { NewsCard } from "@/components/news-card";
 import { PlayerCard } from "@/components/player-card";
 import { SectionHeading } from "@/components/section-heading";
+import { WatchlistPanel } from "@/components/watchlist-panel";
 import { computeAllPlayers, getTrendingSummaries } from "@/lib/nfl-data";
 import { fetchNews } from "@/lib/news";
 import { currentStatSeason } from "@/lib/sleeper";
@@ -125,6 +126,8 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <WatchlistPanel news={news} />
 
       {news.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">

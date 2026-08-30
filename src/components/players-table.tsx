@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
+import { WatchStar } from "@/components/watch-star";
 import { cn, formatPts, scoreBarColor, scoreColor } from "@/lib/utils";
 import type { PlayerSummary } from "@/types";
 
@@ -156,6 +157,7 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
                 </td>
                 <td className="px-2 py-2.5">
                   <Link href={`/player/${player.id}`} className="flex items-center gap-2.5">
+                    <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
                     <PlayerAvatar
                       playerId={player.id}
                       name={player.name}

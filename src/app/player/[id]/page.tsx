@@ -5,6 +5,7 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 import { NewsCard } from "@/components/news-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
+import { WatchStar } from "@/components/watch-star";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { getPlayerDetail } from "@/lib/nfl-data";
 import { cn, formatPts, scoreBarColor, scoreColor } from "@/lib/utils";
@@ -78,9 +79,12 @@ export default async function PlayerPage({
               size="lg"
             />
             <div>
-              <h1 className="font-display text-4xl tracking-wide text-slate-100 sm:text-5xl">
-                {player.name}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="font-display text-4xl tracking-wide text-slate-100 sm:text-5xl">
+                  {player.name}
+                </h1>
+                <WatchStar playerId={player.id} playerName={player.name} />
+              </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <PositionBadge position={player.position} />
                 {trendCount > 0 && (
