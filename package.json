@@ -1,0 +1,33 @@
+{
+  "name": "fantasy-football-trader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered fantasy football trade analyzer with real NFL data, news, and league integration",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "fast-xml-parser": "^4.5.1",
+    "lucide-react": "^1.37.0",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.1.6",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.0"
+  }
+}
