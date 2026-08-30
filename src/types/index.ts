@@ -92,6 +92,7 @@ export interface PlayerSummary {
   value: PlayerValue;
   posRank?: number;
   trendCount?: number;
+  byeWeek?: number;
 }
 
 export interface PlayerBundle extends PlayerSummary {
@@ -153,6 +154,7 @@ export interface LeagueTeam {
 
 export interface LeagueResponse {
   ok: boolean;
+  platform: "SLEEPER" | "ESPN";
   league: {
     id: string;
     name: string;
@@ -161,4 +163,5 @@ export interface LeagueResponse {
     scoringLabel: string;
   };
   teams: LeagueTeam[];
+  unmatched?: string[];
 }

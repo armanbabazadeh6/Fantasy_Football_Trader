@@ -1,20 +1,32 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { Link2, Loader2, Search, Trophy, UserPlus } from "lucide-react";
+import { Link2, Loader2, Trophy, UserPlus } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { cn, scoreColor } from "@/lib/utils";
 import type { LeagueResponse } from "@/types";
 
+type Platform = "ESPN" | "SLEEPER";
+
 interface StoredLeague {
+  platform: Platform;
   leagueId: string;
   rosterId: number;
   teamName: string;
 }
 
+interface StoredEspnCreds {
+  leagueId: string;
+  s2: string;
+  swid: string;
+}
+
 export default function LeaguePage() {
+  const [platform, setPlatform] = useState<Platform>("ESPN");
   const [leagueId, setLeagueId] = useState("");
+  const [s2, setS2] = useState("");
+  const [swid, setSwid] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LeagueResponse | null>(null);
@@ -23,12 +35,21 @@ export default function LeaguePage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("fft.league");
-      if (raw) {
-        const parsed = JSON.parse(raw) as StoredLeague;
-        setStored(parsed);
-        setLeagueId(parsed.leagueId);
+      let storedLeague: StoredLeague | null = null;
+      const leagueRaw = localStorage.getItem("fft.league");
+      if (leagueRaw) {
+        storedLeague = JSON.parse(leagueRaw) as StoredLeague;
+        setStored(storedLeague);
+        setPlatform(storedLeague.platform ?? "SLEEPER");
       }
+      let creds: StoredEspnCreds | null = null;
+      const credsRaw = localStorage.getItem("fft.espn");
+      if (credsRaw) {
+        creds = JSON.parse(credsRaw) as StoredEspnCreds;
+        setS2(creds.s2 ?? "");
+        setSwid(creds.swid ?? "");
+      }
+      setLeagueId(storedLeague?.leagueId ?? creds?.leagueId ?? "");
     } catch {
     }
   }, []);
@@ -36,37 +57,39 @@ export default function LeaguePage() {
   async function loadLeague() {
     const id = leagueId.trim();
     if (!/^\d{4,12}$/.test(id)) {
-      setError("Enter a numeric Sleeper league ID (found in your league URL).");
+      setError("Enter a numeric league ID (found in your league URL).");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/league/${id}`);
-      const json = (await res.json()) as LeagueResponse & { error?: string };
+      let json: LeagueResponse & { error?: string };
+      if (platform === "ESPN") {
+        const res = await fetch(`/api/espn-league/${id}`, {
+          headers: {
+            ...(s2.trim() ? { "x-espn-s2": s2.trim() } : {}),
+            ...(swid.trim() ? { "x-espn-swid": swid.trim() } : {}),
+          },
+        });
+        json = (await res.json()) as LeagueResponse;
+      } else {
+        const res = await fetch(`/api/league/${id}`);
+        json = (await res.json()) as LeagueResponse;
+      }
       if (!json.ok) throw new Error(json.error || "League not found");
       setData(json);
-      setExpandedTeam(null);
+      setExpandedTeam(stored?.leagueId === id ? stored.rosterId : null);
+      if (platform === "ESPN" && s2.trim()) {
+        try {
+          localStorage.setItem(
+            "fft.espn",
+            JSON.stringify({ leagueId: id, s2: s2.trim(), swid: swid.trim() } as StoredEspnCreds)
+          );
+        } catch {
+        }
+      }
     } catch (err) {
       setData(null);
-      setError(err instanceof Error ? err.message : "Failed to load league");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadStored() {
-    if (!stored) return;
-    setLeagueId(stored.leagueId);
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/league/${stored.leagueId}`);
-      const json = (await res.json()) as LeagueResponse & { error?: string };
-      if (!json.ok) throw new Error(json.error || "League not found");
-      setData(json);
-      setExpandedTeam(stored.rosterId);
-    } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load league");
     } finally {
       setLoading(false);
@@ -79,14 +102,15 @@ export default function LeaguePage() {
     players: LeagueResponse["teams"][number]["players"]
   ) {
     const payload = {
-      leagueId: data?.league.id ?? leagueId.trim(),
+      platform,
+      leagueId: leagueId.trim(),
       rosterId,
       teamName,
       players,
     };
     try {
       localStorage.setItem("fft.league", JSON.stringify(payload));
-      setStored({ leagueId: payload.leagueId, rosterId, teamName });
+      setStored({ platform, leagueId: payload.leagueId, rosterId, teamName });
     } catch {
     }
   }
@@ -98,43 +122,114 @@ export default function LeaguePage() {
           YOUR <span className="text-volt">LEAGUE</span>
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Paste your Sleeper league ID (the number in your league URL) to see
-          standings, roster values, and unlock quick-add in the trade analyzer.
+          Connect your real league to see standings, roster values, and unlock
+          quick-add in the trade analyzer. Works with ESPN and Sleeper.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-3 focus-within:border-volt/50 sm:max-w-md">
-          <Search className="h-4 w-4 shrink-0 text-slate-500" />
+      <div className="mb-5 flex gap-2">
+        {(["ESPN", "SLEEPER"] as Platform[]).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => {
+              setPlatform(p);
+              setData(null);
+              setError(null);
+            }}
+            className={cn(
+              "rounded-lg border px-4 py-2 text-sm font-semibold transition-colors",
+              platform === p
+                ? "border-volt/40 bg-volt/10 text-volt"
+                : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
+            )}
+          >
+            {p === "ESPN" ? "ESPN Fantasy" : "Sleeper"}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-white/5 bg-slate-900/60 p-5">
+        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          League ID
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
           <input
             value={leagueId}
             onChange={(event) => setLeagueId(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") loadLeague();
             }}
-            placeholder="Sleeper league ID, e.g. 987654321098765432"
+            placeholder={platform === "ESPN" ? "e.g. 359217243" : "e.g. 987654321098765432"}
             inputMode="numeric"
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none"
+            className="min-w-[220px] flex-1 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
           />
-        </div>
-        <button
-          type="button"
-          onClick={loadLeague}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg bg-volt px-5 py-3 text-sm font-bold text-slate-950 transition-all enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-          {loading ? "Loading..." : "Load League"}
-        </button>
-        {stored && !loading && data?.league.id !== stored.leagueId && (
           <button
             type="button"
-            onClick={loadStored}
-            className="flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
+            onClick={loadLeague}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg bg-volt px-5 py-3 text-sm font-bold text-slate-950 transition-all enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Link2 className="h-4 w-4" />
-            Reopen {stored.teamName}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+            {loading ? "Loading..." : "Load League"}
           </button>
+        </div>
+
+        {platform === "ESPN" && (
+          <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
+            <details className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 text-xs leading-relaxed text-slate-400">
+              <summary className="cursor-pointer font-semibold text-sky-300">
+                Private league? Get your ESPN cookies (one time, ~60 seconds)
+              </summary>
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Log into fantasy.espn.com in this browser</li>
+                <li>Press F12 and open the Application tab (Storage on Firefox)</li>
+                <li>Under Cookies, select fantasy.espn.com</li>
+                <li>
+                  Copy the value of <span className="text-sky-300">espn_s2</span> (very long
+                  string) and <span className="text-sky-300">SWID</span> (looks like
+                  {" {"}XXXXXXXX-...{"}"}) into the fields below
+                </li>
+              </ol>
+              <p className="mt-2 text-[11px] text-slate-500">
+                Cookies are stored only in your browser on this machine and are sent
+                straight to ESPN with each league request. They are never written to disk
+                by the server.
+              </p>
+            </details>
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                espn_s2 cookie
+              </label>
+              <textarea
+                value={s2}
+                onChange={(event) => setS2(event.target.value)}
+                placeholder="AEABjAI..."
+                rows={2}
+                spellCheck={false}
+                className="w-full resize-y rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                SWID cookie
+              </label>
+              <input
+                value={swid}
+                onChange={(event) => setSwid(event.target.value)}
+                placeholder="{8C5F9A61-...}"
+                spellCheck={false}
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {platform === "SLEEPER" && (
+          <p className="mt-3 border-t border-white/5 pt-3 text-xs text-slate-500">
+            The league ID is the number in your Sleeper league URL:
+            sleeper.com/leagues/<span className="text-slate-300">987654321098765432</span>
+          </p>
         )}
       </div>
 
@@ -154,9 +249,18 @@ export default function LeaguePage() {
               {data.league.scoringLabel}
             </span>
             <span className="text-xs text-slate-500">
-              {data.league.season} season · {data.league.totalRosters} teams
+              {data.league.season} season · {data.league.totalRosters} teams ·{" "}
+              {data.platform === "ESPN" ? "ESPN Fantasy" : "Sleeper"}
             </span>
           </div>
+
+          {data.unmatched && data.unmatched.length > 0 && (
+            <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
+              Could not match {data.unmatched.length} rostered player(s) to Sleeper IDs:{" "}
+              {data.unmatched.slice(0, 8).join(", ")}
+              {data.unmatched.length > 8 ? ", ..." : ""}. They were skipped in value totals.
+            </p>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
             <table className="w-full min-w-[680px] text-sm">
@@ -183,7 +287,7 @@ export default function LeaguePage() {
                       <td className="px-2 py-3">
                         <p className="font-medium text-slate-100">{team.teamName}</p>
                         {team.displayName && team.displayName !== team.teamName && (
-                          <p className="text-xs text-slate-500">@{team.displayName}</p>
+                          <p className="text-xs text-slate-500">{team.displayName}</p>
                         )}
                       </td>
                       <td className="px-2 py-3 text-right tabular-nums text-slate-300">
@@ -238,6 +342,7 @@ export default function LeaguePage() {
                                   <p className="text-[11px] text-slate-500">
                                     {player.value.tier}
                                     {player.injuryStatus ? ` · ${player.injuryStatus}` : ""}
+                                    {player.byeWeek ? ` · Bye W${player.byeWeek}` : ""}
                                   </p>
                                 </div>
                                 <PositionBadge position={player.position} />
@@ -257,7 +362,8 @@ export default function LeaguePage() {
           </div>
           <p className="mt-3 text-xs text-slate-600">
             Click a team row to expand its roster. &quot;Use my team&quot; saves that roster
-            to the trade analyzer for quick-add.
+            to the trade analyzer for quick-add
+            {data.platform === "ESPN" ? " (ESPN players are matched to Sleeper IDs)" : ""}.
           </p>
         </div>
       )}
@@ -266,9 +372,11 @@ export default function LeaguePage() {
         <div className="mt-8 rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-6 py-16 text-center">
           <Trophy className="mx-auto h-8 w-8 text-slate-700" />
           <p className="mt-3 text-sm text-slate-500">
-            Where do I find my league ID? Open your league on Sleeper and copy the
-            number from the URL: sleeper.com/leagues/
-            <span className="text-slate-300">987654321098765432</span>
+            Load a league to see standings, rosters, and team values.
+          </p>
+          <p className="mt-1 flex items-center justify-center gap-1 text-xs text-slate-600">
+            <Link2 className="h-3 w-3" />
+            Your selection is remembered on this device
           </p>
         </div>
       )}

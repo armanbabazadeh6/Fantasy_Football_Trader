@@ -76,6 +76,7 @@ export async function GET(
 
     const response: LeagueResponse = {
       ok: true,
+      platform: "SLEEPER",
       league: {
         id: league.league_id,
         name: league.name,
