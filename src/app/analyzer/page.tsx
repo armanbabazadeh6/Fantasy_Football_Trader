@@ -20,6 +20,7 @@ import {
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerSearch } from "@/components/player-search";
 import { PositionBadge } from "@/components/position-badge";
+import { ShareVerdictButton } from "@/components/share-verdict-button";
 import { ruleVerdict, sideValue } from "@/lib/value-engine";
 import { cn, formatPts, relativeTime, verdictStyle } from "@/lib/utils";
 import { teamDisplayName } from "@/lib/teams";
@@ -416,14 +417,17 @@ export default function AnalyzerPage() {
                     </ul>
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={saveAnalysis}
-                  className="mt-5 flex items-center gap-2 rounded-lg border border-volt/30 bg-volt/10 px-4 py-2 text-xs font-semibold text-volt transition-colors hover:bg-volt/20"
-                >
-                  {justSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                  {justSaved ? "Saved" : "Save this analysis"}
-                </button>
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={saveAnalysis}
+                    className="flex items-center gap-2 rounded-lg border border-volt/30 bg-volt/10 px-4 py-2 text-xs font-semibold text-volt transition-colors hover:bg-volt/20"
+                  >
+                    {justSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                    {justSaved ? "Saved" : "Save this analysis"}
+                  </button>
+                  <ShareVerdictButton result={result} />
+                </div>
               </div>
             </div>
 

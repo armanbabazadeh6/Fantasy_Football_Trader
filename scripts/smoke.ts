@@ -3,6 +3,7 @@ import { aggregateSeason, extractPPR } from "@/lib/fantasy";
 import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/nfl-data";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
+import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import {
   computeNeeds,
@@ -137,6 +138,45 @@ async function unitTests(): Promise<void> {
   check(
     "espn team abbreviation maps WSH to WAS",
     espnTeamToSleeper("WSH") === "WAS" && espnTeamToSleeper("KC") === "KC"
+  );
+
+  check(
+    "xml escaping handles special characters",
+    escapeXml(`Ja'Marr <&> "Chase"`) === "Ja&apos;Marr &lt;&amp;&gt; &quot;Chase&quot;"
+  );
+  const wrapped = wrapText("one two three four five six seven eight", 11, 2);
+  check(
+    "share card text wraps to max lines",
+    wrapped.length === 2 && wrapped[0].length <= 11
+  );
+  const cardFixture = {
+    ok: true,
+    give: [
+      {
+        id: "1",
+        name: "Ja'Marr Chase",
+        position: "WR",
+        team: "CIN",
+        status: "Active",
+        rookie: false,
+        value: { score: 84, tier: "Elite Starter", ppg: 19.6, games: 16 },
+        seasons: [],
+        news: [],
+      },
+    ],
+    get: [],
+    engine: { giveValue: 84, getValue: 120, diff: 36, verdict: "LEAN_DECLINE" as const, needs: [] },
+    ai: null,
+    aiConfigured: false,
+    generatedAt: new Date().toISOString(),
+  };
+  const svg = buildCardSvg(cardFixture, "LEAN_DECLINE");
+  check(
+    "share card builds valid svg with escaped names and verdict",
+    svg.startsWith("<svg") &&
+      svg.includes("Ja&apos;Marr Chase") &&
+      svg.includes("LEAN DECLINE") &&
+      !svg.includes("<&")
   );
 }
 
