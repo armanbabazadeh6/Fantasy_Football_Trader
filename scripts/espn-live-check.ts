@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { mapEspnLeagueToSleeper } from "@/lib/espn";
-import { findTradePartners, optimalLineup, powerRankings } from "@/lib/league-intel";
+import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
 
 async function main() {
   const [, , cookieFile, leagueId] = process.argv;
@@ -41,6 +41,14 @@ async function main() {
       const targets = partner.targets.map((t) => `${t.targetName} (${t.position})`).join(", ");
       console.log(`  ${partner.teamName}: ${targets}`);
     }
+
+    console.log(`\nproposals for ${me.teamName}:`);
+    for (const proposal of proposeTrades(result.teams, me.rosterId)) {
+      console.log(
+        `  GIVE ${proposal.youGive.map((p) => `${p.name} (${p.value.score ?? "—"})`).join(" + ")} FOR ${proposal.youGet.map((p) => `${p.name} (${p.value.score ?? "—"})`).join(" + ")} [${proposal.partnerTeam}]`
+      );
+    }
+
     if (result.league.rosterSlots) {
       const lineup = optimalLineup(me.players, result.league.rosterSlots);
       console.log(`\noptimal lineup (${lineup.projectedTotal} pts):`);

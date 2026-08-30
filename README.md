@@ -18,7 +18,8 @@ Tuned for 12-team PPR leagues.
 | **Player Value Board** | Every fantasy-relevant NFL player scored 0-100 with sortable columns: PPG, games, positional rank, age, tier. Search and filter by position. |
 | **Player Pages** | Weekly fantasy output chart, boom/bust rates, best/worst weeks, two-season history, value breakdown, and every recent news mention. |
 | **Live News Feed** | 300+ headlines per refresh from ESPN (news API + RSS), Google News (breaking, fantasy, and injury queries — each story labeled with its real publisher), CBS Sports, Yahoo Sports + Yahoo Fantasy, ProFootballTalk, Rotoballer, and the Sleeper blog — the same feed the analyzer reads, matched to players by name. Cache refreshes every 8 minutes. |
-| **League Intelligence** | Connect your ESPN Fantasy or Sleeper league for standings, rosters, and scoring format. ESPN adds: **graded trade history** (every completed trade valued by the engine with winners called), **power rankings** (roster value + record + points), a **trade partner finder** (matches your needs to opponents' surpluses), and **optimal lineups** built from your real roster slots. |
+| **League Intelligence** | Connect your ESPN Fantasy or Sleeper league for standings, rosters, and scoring format. ESPN adds: **graded trade history** (every completed trade valued by the engine with winners called), **power rankings** (with ESPN's own projected rank shown alongside), a **trade partner finder**, an **auto trade proposer** that generates value-balanced offers you can copy into league chat, and **optimal lineups** built from your real roster slots using ESPN scoring. |
+| **ESPN Sync + Accuracy Audit** | Player positions and team names match ESPN exactly; roster displays show ESPN's own season points alongside engine values. An audit script cross-checks every rostered player's season totals against ESPN's numbers — 0 unmatched players, 0 position differences, 79% within 2.0 fantasy points (remaining deltas are platform scoring quirks on QBs/D-STs). |
 | **Watchlist** | Star any player from the value board or their page — the home dashboard shows your watched players with injuries, bye weeks, and their latest news mentions. |
 | **Shareable Verdicts** | Export any trade verdict as a clean branded card (PNG) to drop in league chat. |
 | **Bye Week Awareness** | Full-season schedule is parsed to derive every team's bye week — shown on player pages, the value board, trade cards, and included in the AI's context. |
@@ -88,6 +89,13 @@ against the real Sleeper API and news feeds:
 
 ```bash
 npm run smoke
+```
+
+ESPN integration can be verified against a real league with saved cookies:
+
+```bash
+npx tsx scripts/espn-live-check.ts <cookie-file> <league-id>
+npx tsx scripts/espn-audit.ts <cookie-file> <league-id>
 ```
 
 ## Project structure
