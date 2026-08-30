@@ -80,3 +80,173 @@ body {
 .analyzing-bar {
   animation: pulse-bar 1.2s ease-in-out infinite;
 }
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 800px 0;
+  }
+}
+
+@keyframes spiral {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-14deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(-9deg);
+  }
+}
+
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(163, 230, 53, 0);
+  }
+  50% {
+    box-shadow: 0 0 22px 3px rgba(163, 230, 53, 0.2);
+  }
+}
+
+@keyframes first-down {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes sweep-x {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(480%);
+  }
+}
+
+.analyzing-sweep {
+  animation: sweep-x 1.25s ease-in-out infinite;
+}
+
+@keyframes hud-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.reveal {
+  opacity: 0;
+}
+
+.reveal-visible {
+  animation: fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-spiral {
+  animation: spiral 1.5s linear infinite;
+}
+
+.animate-float {
+  animation: float-bob 7s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow-pulse 3.2s ease-in-out infinite;
+}
+
+.hud-blink {
+  animation: hud-blink 1.4s ease-in-out infinite;
+}
+
+.field-lines {
+  animation: drift 90s linear infinite;
+}
+
+.first-down-line {
+  transform-origin: left;
+  animation: first-down 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

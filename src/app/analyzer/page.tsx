@@ -8,7 +8,6 @@ import {
   ExternalLink,
   History,
   Lightbulb,
-  Loader2,
   Newspaper,
   RotateCcw,
   Save,
@@ -21,6 +20,8 @@ import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerSearch } from "@/components/player-search";
 import { PositionBadge } from "@/components/position-badge";
 import { ShareVerdictButton } from "@/components/share-verdict-button";
+import { FootballSpinner } from "@/components/football-spinner";
+import { TouchdownBurst } from "@/components/touchdown-burst";
 import { ruleVerdict, sideValue } from "@/lib/value-engine";
 import { cn, formatPts, relativeTime, verdictStyle } from "@/lib/utils";
 import { teamDisplayName } from "@/lib/teams";
@@ -276,11 +277,14 @@ export default function AnalyzerPage() {
               type="button"
               onClick={analyze}
               disabled={give.length === 0 || get.length === 0 || analyzing}
-              className="flex items-center gap-2 rounded-lg bg-volt px-6 py-3 text-sm font-bold text-slate-950 transition-all enabled:hover:brightness-110 enabled:hover:shadow-[0_0_30px_rgba(163,230,53,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
+              className={cn(
+                "flex items-center gap-2 rounded-lg bg-volt px-6 py-3 text-sm font-bold text-slate-950 transition-all enabled:hover:brightness-110 enabled:hover:shadow-[0_0_30px_rgba(163,230,53,0.3)] disabled:cursor-not-allowed disabled:opacity-40",
+                !analyzing && give.length > 0 && get.length > 0 && "btn-sheen"
+              )}
             >
               {analyzing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <FootballSpinner className="h-4 w-4" />
                   Analyzing...
                 </>
               ) : (
@@ -295,7 +299,12 @@ export default function AnalyzerPage() {
         {error && (
           <p className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
             {error}
-          </p>
+        </p>
+        )}
+        {analyzing && (
+          <div className="mt-4 h-1 overflow-hidden rounded-full bg-slate-800">
+            <div className="analyzing-sweep h-full w-1/4 rounded-full bg-volt" />
+          </div>
         )}
       </div>
 
@@ -436,11 +445,12 @@ export default function AnalyzerPage() {
                 PLAYERS IN THIS DEAL
               </h3>
               {[...result.give, ...result.get].map((bundle, index) => (
-                <PlayerResultCard
-                  key={bundle.id}
-                  bundle={bundle}
-                  side={index < result.give.length ? "send" : "receive"}
-                />
+                <div key={bundle.id} style={{ animationDelay: `${index * 70}ms` }} className="animate-fade-up">
+                  <PlayerResultCard
+                    bundle={bundle}
+                    side={index < result.give.length ? "send" : "receive"}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -524,10 +534,11 @@ function TradeSidePanel({
             Search and add players to this side of the trade
           </p>
         )}
-        {players.map((player) => (
+        {players.map((player, index) => (
           <div
             key={player.id}
-            className="flex items-center gap-3 rounded-lg border border-white/5 bg-slate-950/60 px-3 py-2.5"
+            style={{ animationDelay: `${index * 50}ms` }}
+            className="animate-fade-up flex items-center gap-3 rounded-lg border border-white/5 bg-slate-950/60 px-3 py-2.5"
           >
             <PlayerAvatar
               playerId={player.id}
@@ -573,9 +584,11 @@ function TradeSidePanel({
 
 function VerdictBanner({ result, verdict }: { result: AnalyzeResponse; verdict: string | null }) {
   const style = verdictStyle(verdict);
+  const celebrate = verdict === "ACCEPT" || verdict === "LEAN_ACCEPT";
   return (
-    <div className={cn("rounded-xl border p-6", style.bg, style.border)}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className={cn("relative overflow-hidden rounded-xl border p-6", style.bg, style.border)}>
+      <TouchdownBurst active={celebrate} />
+      <div key={result.generatedAt} className="animate-scale-in relative flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             Verdict {result.ai ? "— AI analyst" : "— rule engine"}

@@ -68,7 +68,7 @@ export default async function PlayerPage({
         All players
       </Link>
 
-      <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-6">
+      <div className="animate-scale-in rounded-2xl border border-white/5 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex items-center gap-5">
             <PlayerAvatar

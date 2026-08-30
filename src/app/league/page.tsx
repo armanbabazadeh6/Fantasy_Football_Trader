@@ -412,6 +412,7 @@ export default function LeaguePage() {
             </p>
           )}
 
+          <div key={tab} className="animate-fade-up">
           {tab === "standings" && (
             <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
               <table className="w-full min-w-[680px] text-sm">
@@ -706,6 +707,7 @@ export default function LeaguePage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       )}
 
