@@ -18,7 +18,9 @@ Tuned for 12-team PPR leagues.
 | **Player Value Board** | Every fantasy-relevant NFL player scored 0-100 with sortable columns: PPG, games, positional rank, age, tier. Search and filter by position. |
 | **Player Pages** | Weekly fantasy output chart, boom/bust rates, best/worst weeks, two-season history, value breakdown, and every recent news mention. |
 | **Live News Feed** | 300+ headlines per refresh from ESPN (news API + RSS), Google News (breaking, fantasy, and injury queries — each story labeled with its real publisher), CBS Sports, Yahoo Sports + Yahoo Fantasy, ProFootballTalk, Rotoballer, and the Sleeper blog — the same feed the analyzer reads, matched to players by name. Cache refreshes every 8 minutes. |
-| **League Integration** | Connect your ESPN Fantasy or Sleeper league to load real standings, rosters, and scoring format. Set your team once and the analyzer shows quick-add chips from your roster and factors your positional needs into the verdict. ESPN rosters are matched to Sleeper player IDs automatically. |
+| **League Intelligence** | Connect your ESPN Fantasy or Sleeper league for standings, rosters, and scoring format. ESPN adds: **graded trade history** (every completed trade valued by the engine with winners called), **power rankings** (roster value + record + points), a **trade partner finder** (matches your needs to opponents' surpluses), and **optimal lineups** built from your real roster slots. |
+| **Watchlist** | Star any player from the value board or their page — the home dashboard shows your watched players with injuries, bye weeks, and their latest news mentions. |
+| **Shareable Verdicts** | Export any trade verdict as a clean branded card (PNG) to drop in league chat. |
 | **Bye Week Awareness** | Full-season schedule is parsed to derive every team's bye week — shown on player pages, the value board, trade cards, and included in the AI's context. |
 | **Saved Analyses** | Every verdict is saved locally so you can revisit past trade calls. |
 
@@ -93,29 +95,36 @@ npm run smoke
 ```
 src/
   app/
-    page.tsx              Home
+    page.tsx              Home (watchlist, trending, news)
     analyzer/             Trade builder + verdict UI
-    players/             Value board
-    player/[id]/         Player detail
-    news/                News browser
-    league/              League import (ESPN + Sleeper)
+    players/              Value board
+    player/[id]/          Player detail
+    news/                 News browser
+    league/               League intelligence (ESPN + Sleeper)
     api/
-      analyze/           Trade analysis (rule engine + AI)
-      players/           Player search
-      trending/          Trending adds
-      news/              News feed
-      league/[leagueId]/ League standings + rosters
-  components/            Shared UI
+      analyze/            Trade analysis (rule engine + AI)
+      players/            Player search / fetch by ids
+      trending/           Trending adds
+      news/               News feed
+      league/[leagueId]/  Sleeper standings + rosters
+      espn-league/[leagueId]/
+        route.ts          ESPN standings + rosters
+        transactions/     Graded trade history
+  components/             Shared UI
   lib/
-    sleeper.ts           Sleeper API client
-    cache.ts             Disk cache with TTLs
-    fantasy.ts           PPR math + weekly aggregation
-    value-engine.ts      Player values, side totals, verdicts
-    news.ts              RSS aggregation + player matching
-    ai.ts                OpenAI-compatible AI analyst client
-    nfl-data.ts          Composition layer
+    sleeper.ts            Sleeper API client
+    espn.ts              ESPN fantasy client + player-to-Sleeper mapping
+    league-intel.ts       Power rankings, trade partners, optimal lineups
+    schedule.ts           Bye weeks from ESPN schedule
+    cache.ts              Disk cache with TTLs
+    fantasy.ts            PPR math + weekly aggregation
+    value-engine.ts       Player values, side totals, verdicts
+    news.ts                RSS + Google News aggregation, player matching
+    share-card.ts         Verdict card generator
+    ai.ts                 OpenAI-compatible AI analyst client
+    nfl-data.ts           Composition layer
 scripts/
-  smoke.ts               Unit + integration test suite
+  smoke.ts                Unit + integration test suite
 ```
 
 ## Roadmap
