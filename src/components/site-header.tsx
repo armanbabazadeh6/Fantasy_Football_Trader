@@ -15,6 +15,7 @@ function GithubMark({ className }: { className?: string }) {
 const NAV_LINKS = [
   { href: "/analyzer", label: "Analyzer" },
   { href: "/players", label: "Players" },
+  { href: "/waiver", label: "Waiver" },
   { href: "/news", label: "News" },
   { href: "/league", label: "League" },
 ];
