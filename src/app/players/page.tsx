@@ -1,5 +1,6 @@
 import { PlayersTable } from "@/components/players-table";
-import { getPlayerSummaries } from "@/lib/nfl-data";
+import { listPlayerSummaries, PLAYER_SORT_KEYS } from "@/lib/nfl-data";
+import type { PlayerSortKey } from "@/lib/nfl-data";
 
 export const dynamic = "force-dynamic";
 
@@ -7,28 +8,32 @@ export const metadata = {
   title: "Player Values",
 };
 
-export default async function PlayersPage() {
-  const players = await getPlayerSummaries();
-  const light = players.map((p) => ({
-    id: p.id,
-    name: p.name,
-    position: p.position,
-    team: p.team,
-    status: p.status,
-    injuryStatus: p.injuryStatus,
-    age: p.age,
-    rookie: p.rookie,
-    posRank: p.posRank,
-    trendCount: p.trendCount,
-    byeWeek: p.byeWeek,
-    valueTrend: p.valueTrend,
-    projection: p.projection,
-    value: {
-      score: p.value.score,
-      tier: p.value.tier,
-      ppg: p.value.ppg,
-      games: p.value.games,
-    },
-  }));
-  return <PlayersTable players={light} />;
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function PlayersPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const q = (first(params.q) ?? "").slice(0, 60);
+  const posRaw = (first(params.pos) ?? "ALL").toUpperCase();
+  const pos = ["QB", "RB", "WR", "TE", "K", "DEF"].includes(posRaw) ? posRaw : "ALL";
+  const sortRaw = first(params.sort) ?? "score";
+  const sort = (PLAYER_SORT_KEYS.includes(sortRaw as PlayerSortKey)
+    ? sortRaw
+    : "score") as PlayerSortKey;
+  const dir = first(params.dir) === "asc" ? "asc" : "desc";
+
+  const initial = await listPlayerSummaries({ q, pos, sort, dir, page: 0, pageSize: 50 });
+
+  return (
+    <PlayersTable
+      initialPlayers={initial.players}
+      initialTotal={initial.total}
+      initialFilters={{ q, pos, sort, dir }}
+    />
+  );
 }

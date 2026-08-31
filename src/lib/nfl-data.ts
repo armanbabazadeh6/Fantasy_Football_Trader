@@ -226,6 +226,96 @@ export async function searchPlayerSummaries(
   return { players: filtered.slice(0, limit), total };
 }
 
+export type PlayerSortKey =
+  | "score"
+  | "ppg"
+  | "proj"
+  | "games"
+  | "posRank"
+  | "age"
+  | "name";
+
+export const PLAYER_SORT_KEYS: PlayerSortKey[] = [
+  "score",
+  "ppg",
+  "proj",
+  "games",
+  "posRank",
+  "age",
+  "name",
+];
+
+export interface ListPlayerParams {
+  q?: string;
+  pos?: string;
+  sort?: string;
+  dir?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListPlayerResult {
+  players: PlayerSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function listPlayerSummaries(
+  params: ListPlayerParams
+): Promise<ListPlayerResult> {
+  const summaries = await getPlayerSummaries();
+  const q = (params.q ?? "").trim().toLowerCase();
+  let filtered = summaries;
+  if (params.pos && params.pos !== "ALL") {
+    filtered = filtered.filter((p) => p.position === params.pos);
+  }
+  if (q) {
+    filtered = filtered.filter((p) => p.name.toLowerCase().includes(q));
+  }
+  const key: PlayerSortKey = PLAYER_SORT_KEYS.includes(
+    params.sort as PlayerSortKey
+  )
+    ? (params.sort as PlayerSortKey)
+    : "score";
+  const dir = params.dir === "asc" ? 1 : -1;
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    switch (key) {
+      case "name":
+        cmp = a.name.localeCompare(b.name);
+        break;
+      case "ppg":
+        cmp = (a.value.ppg ?? -1) - (b.value.ppg ?? -1);
+        break;
+      case "proj":
+        cmp = (a.projection?.ppg ?? -1) - (b.projection?.ppg ?? -1);
+        break;
+      case "games":
+        cmp = a.value.games - b.value.games;
+        break;
+      case "posRank":
+        cmp = (a.posRank ?? 9999) - (b.posRank ?? 9999);
+        break;
+      case "age":
+        cmp = (a.age ?? 99) - (b.age ?? 99);
+        break;
+      default:
+        cmp = (a.value.score ?? -1) - (b.value.score ?? -1);
+    }
+    if (cmp !== 0) return cmp * dir;
+    return a.name.localeCompare(b.name);
+  });
+  const pageSize = Math.min(Math.max(params.pageSize ?? 50, 1), 200);
+  const page = Math.max(0, params.page ?? 0);
+  return {
+    players: sorted.slice(page * pageSize, (page + 1) * pageSize),
+    total: filtered.length,
+    page,
+    pageSize,
+  };
+}
+
 export async function getTrendingSummaries(limit = 20): Promise<PlayerSummary[]> {
   const [core, computed] = await Promise.all([loadCoreData(), computeAllPlayers()]);
   const trending = [...core.trendCounts.entries()]

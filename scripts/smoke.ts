@@ -1,6 +1,6 @@
 import { fetchAllPlayers, fetchWeeklyStats, fetchTrending, statSeasons } from "@/lib/sleeper";
 import { aggregateSeason, extractPPR } from "@/lib/fantasy";
-import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/nfl-data";
+import { computeAllPlayers, getPlayerBundles, getPlayerSummaries, listPlayerSummaries } from "@/lib/nfl-data";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { restOfSeasonGames } from "@/lib/schedule";
@@ -461,6 +461,38 @@ async function integrationTests(): Promise<void> {
   check("player summaries sorted by value", summaries.length > 1000 && (summaries[0]?.value.score ?? -1) >= (summaries[50]?.value.score ?? -1), `total=${summaries.length}, top=${summaries[0]?.name} (${summaries[0]?.value.score})`);
   const withByes = summaries.filter((p) => p.byeWeek);
   check("bye weeks attached to summaries", withByes.length > 200, `${withByes.length} players carry a bye week`);
+
+  const page0 = await listPlayerSummaries({ page: 0, pageSize: 50 });
+  check(
+    "board page 0 is score-sorted slice",
+    page0.players.length === 50 &&
+      page0.players[0].name === summaries[0].name &&
+      page0.total === summaries.length,
+    `first=${page0.players[0].name}, total=${page0.total}`
+  );
+  const page1 = await listPlayerSummaries({ page: 1, pageSize: 50 });
+  const overlap = page1.players.filter((p) => page0.players.some((q) => q.id === p.id));
+  check("board pages do not overlap", overlap.length === 0, `overlap=${overlap.length}`);
+  const qbBoard = await listPlayerSummaries({ pos: "QB", page: 0, pageSize: 200 });
+  const qbTotal = summaries.filter((p) => p.position === "QB").length;
+  check(
+    "board position filter",
+    qbBoard.total === qbTotal && qbBoard.players.every((p) => p.position === "QB"),
+    `QBs=${qbBoard.total}`
+  );
+  const ageBoard = await listPlayerSummaries({ sort: "age", dir: "asc", page: 0, pageSize: 50 });
+  const ages = ageBoard.players.map((p) => p.age ?? 99);
+  check(
+    "board server-side sort by age asc",
+    ages.every((a, i) => i === 0 || ages[i - 1] <= a),
+    `youngest=${ages[0]} oldest=${ages[ages.length - 1]}`
+  );
+  const qBoard = await listPlayerSummaries({ q: "mahomes", page: 0, pageSize: 50 });
+  check(
+    "board query filter",
+    qBoard.players.every((p) => p.name.toLowerCase().includes("mahomes")),
+    `matches=${qBoard.players.length}`
+  );
 
   const byes = await fetchTeamByeWeeks();
   const byeValues = Object.values(byes);

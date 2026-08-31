@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp } from "lucide-react";
+import { ChevronDown, Search, TrendingUp } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { WatchStar } from "@/components/watch-star";
@@ -13,48 +13,127 @@ const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
 const PAGE_SIZE = 50;
 
 type SortKey = "score" | "ppg" | "proj" | "games" | "posRank" | "age" | "name";
+type SortDir = "asc" | "desc";
 
-export function PlayersTable({ players }: { players: PlayerSummary[] }) {
-  const [query, setQuery] = useState("");
-  const [position, setPosition] = useState("ALL");
-  const [sortKey, setSortKey] = useState<SortKey>("score");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(0);
+interface Filters {
+  q: string;
+  pos: string;
+  sort: SortKey;
+  dir: SortDir;
+}
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return players.filter((p) => {
-      if (position !== "ALL" && p.position !== position) return false;
-      if (!q) return true;
-      return p.name.toLowerCase().includes(q);
-    });
-  }, [players, query, position]);
+export function PlayersTable({
+  initialPlayers,
+  initialTotal,
+  initialFilters,
+}: {
+  initialPlayers: PlayerSummary[];
+  initialTotal: number;
+  initialFilters: Filters;
+}) {
+  const [query, setQuery] = useState(initialFilters.q);
+  const [debouncedQ, setDebouncedQ] = useState(initialFilters.q);
+  const [position, setPosition] = useState(initialFilters.pos);
+  const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
+  const [sortDir, setSortDir] = useState<SortDir>(initialFilters.dir);
+  const [players, setPlayers] = useState<PlayerSummary[]>(initialPlayers);
+  const [total, setTotal] = useState(initialTotal);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isFirstRender = useRef(true);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const sorted = useMemo(() => {
-    const dir = sortDir === "desc" ? -1 : 1;
-    return [...filtered].sort((a, b) => {
-      switch (sortKey) {
-        case "name":
-          return a.name.localeCompare(b.name) * dir;
-        case "ppg":
-          return ((a.value.ppg ?? -1) - (b.value.ppg ?? -1)) * dir;
-        case "proj":
-          return ((a.projection?.ppg ?? -1) - (b.projection?.ppg ?? -1)) * dir;
-        case "games":
-          return (a.value.games - b.value.games) * dir;
-        case "posRank":
-          return ((a.posRank ?? 9999) - (b.posRank ?? 9999)) * dir;
-        case "age":
-          return ((a.age ?? 99) - (b.age ?? 99)) * dir;
-        default:
-          return ((a.value.score ?? -1) - (b.value.score ?? -1)) * dir;
-      }
-    });
-  }, [filtered, sortKey, sortDir]);
+  const buildParams = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
+      params.set("sort", sortKey);
+      params.set("dir", sortDir);
+      if (position !== "ALL") params.set("pos", position);
+      if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
+      return params;
+    },
+    [sortKey, sortDir, position, debouncedQ]
+  );
 
-  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount - 1);
-  const rows = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    listPlayerSummariesApi(buildParams(0))
+      .then((data) => {
+        if (cancelled) return;
+        setPlayers(data.players);
+        setTotal(data.total);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Failed to load players.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [buildParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
+    if (position !== "ALL") params.set("pos", position);
+    if (sortKey !== "score") params.set("sort", sortKey);
+    if (sortDir !== "desc") params.set("dir", sortDir);
+    const qs = params.toString();
+    const href = qs ? `/players?${qs}` : "/players";
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    if (`/players${search}` !== href) {
+      window.history.replaceState(null, "", href);
+    }
+  }, [debouncedQ, position, sortKey, sortDir]);
+
+  const hasMore = players.length < total;
+
+  const loadMore = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listPlayerSummariesApi(
+        buildParams(Math.ceil(players.length / PAGE_SIZE))
+      );
+      setPlayers((prev) => [...prev, ...data.players]);
+      setTotal(data.total);
+    } catch {
+      setError("Failed to load more players.");
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore, players.length, buildParams]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMore();
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -63,7 +142,6 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
       setSortKey(key);
       setSortDir("desc");
     }
-    setPage(0);
   }
 
   return (
@@ -79,8 +157,10 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
           </p>
         </div>
         <p className="text-sm text-slate-500">
-          Showing <span className="font-semibold text-slate-300">{rows.length}</span> of{" "}
-          <span className="font-semibold text-slate-300">{filtered.length.toLocaleString()}</span> players
+          Showing{" "}
+          <span className="font-semibold text-slate-300">{players.length}</span>{" "}
+          of <span className="font-semibold text-slate-300">{total.toLocaleString()}</span>{" "}
+          players
         </p>
       </div>
 
@@ -89,10 +169,7 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
           <Search className="h-4 w-4 shrink-0 text-slate-500" />
           <input
             value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setPage(0);
-            }}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search players..."
             className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
@@ -102,10 +179,7 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
             <button
               key={pos}
               type="button"
-              onClick={() => {
-                setPosition(pos);
-                setPage(0);
-              }}
+              onClick={() => setPosition(pos)}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
                 position === pos
@@ -158,133 +232,157 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((player, index) => (
-              <tr
-                key={player.id}
-                className="value-row-hover border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]"
-              >
-                <td className="py-2.5 pl-4 pr-2 text-slate-600">
-                  {safePage * PAGE_SIZE + index + 1}
-                </td>
-                <td className="px-2 py-2.5">
-                  <Link href={`/player/${player.id}`} className="flex items-center gap-2.5">
-                    <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
-                    <PlayerAvatar
-                      playerId={player.id}
-                      name={player.name}
-                      position={player.position}
-                      team={player.team}
-                      size="sm"
-                    />
-                    <span className="max-w-[180px] truncate font-medium text-slate-100 hover:text-volt">
-                      {player.name}
-                    </span>
-                    {player.injuryStatus && (
-                      <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
-                        {player.injuryStatus}
-                      </span>
-                    )}
-                    {player.trendCount ? (
-                      <TrendingUp className="h-3.5 w-3.5 text-lime-400" />
-                    ) : null}
-                  </Link>
-                </td>
-                <td className="px-2 py-2.5">
-                  <PositionBadge position={player.position} />
-                </td>
-                <td className="px-2 py-2.5 text-xs text-slate-400">
-                  {player.team ?? "FA"}
-                </td>
-                <td className="px-2 py-2.5 text-right tabular-nums text-slate-300">
-                  {formatPts(player.value.ppg)}
-                </td>
-                <td className="px-2 py-2.5 text-right tabular-nums">
-                  <span
-                    className={cn(
-                      player.projection?.source === "espn"
-                        ? "text-slate-200"
-                        : "text-slate-500"
-                    )}
-                  >
-                    {formatPts(player.projection?.ppg)}
-                  </span>
-                  {player.projection?.source === "espn" && (
-                    <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-volt align-middle" />
-                  )}
-                </td>
-                <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
-                  {player.value.games || "—"}
-                </td>
-                <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
-                  {player.posRank ? `#${player.posRank}` : "—"}
-                </td>
-                <td className="px-2 py-2.5 text-center tabular-nums text-slate-400">
-                  {player.byeWeek ? `W${player.byeWeek}` : "—"}
-                </td>
-                <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
-                  {player.age ?? "—"}
-                </td>
-                <td className="px-2 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className={cn("w-8 text-right font-display text-lg tabular-nums", scoreColor(player.value.score))}>
-                      {player.value.score ?? "—"}
-                    </span>
-                    {player.valueTrend ? (
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold",
-                          player.valueTrend > 0 ? "text-emerald-400" : "text-rose-400"
-                        )}
-                      >
-                        {player.valueTrend > 0 ? "▲" : "▼"}
-                        {Math.abs(player.valueTrend)}
-                      </span>
-                    ) : null}
-                    <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-slate-800 sm:block">
-                      {player.value.score !== null && (
-                        <div
-                          className={cn("h-full rounded-full", scoreBarColor(player.value.score))}
-                          style={{ width: `${player.value.score}%` }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="py-2.5 pl-2 pr-4 text-xs text-slate-500">
-                  {player.value.tier}
+            {players.map((player, index) => (
+              <PlayerRow key={player.id} player={player} rank={index + 1} />
+            ))}
+            {loading && (
+              <tr>
+                <td colSpan={12} className="px-4 py-6 text-center text-sm text-slate-500">
+                  Loading players...
                 </td>
               </tr>
-            ))}
+            )}
+            {error && (
+              <tr>
+                <td colSpan={12} className="px-4 py-6 text-center text-sm text-red-400">
+                  {error}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="mt-4 flex items-center justify-between">
         <p className="text-xs text-slate-600">
-          Page {safePage + 1} of {pageCount}
+          {hasMore
+            ? `${(total - players.length).toLocaleString()} more on the board`
+            : "End of board"}
         </p>
-        <div className="flex items-center gap-2">
+        {hasMore ? (
           <button
             type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={safePage === 0}
-            className="rounded-lg border border-white/10 p-2 text-slate-400 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-30"
-            aria-label="Previous page"
+            onClick={loadMore}
+            disabled={loading}
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-40"
           >
-            <ChevronLeft className="h-4 w-4" />
+            Load more
           </button>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-            disabled={safePage >= pageCount - 1}
-            className="rounded-lg border border-white/10 p-2 text-slate-400 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-30"
-            aria-label="Next page"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        ) : null}
       </div>
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
     </div>
+  );
+}
+
+async function listPlayerSummariesApi(
+  params: URLSearchParams
+): Promise<{ players: PlayerSummary[]; total: number }> {
+  const res = await fetch(`/api/players?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`players api failed (${res.status})`);
+  const data = (await res.json()) as {
+    ok: boolean;
+    players: PlayerSummary[];
+    total: number;
+  };
+  if (!data.ok) throw new Error("players api returned error");
+  return { players: data.players, total: data.total };
+}
+
+function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
+  return (
+    <tr className="value-row-hover border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
+      <td className="py-2.5 pl-4 pr-2 text-slate-600">{rank}</td>
+      <td className="px-2 py-2.5">
+        <Link href={`/player/${player.id}`} className="flex items-center gap-2.5">
+          <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
+          <PlayerAvatar
+            playerId={player.id}
+            name={player.name}
+            position={player.position}
+            team={player.team}
+            size="sm"
+          />
+          <span className="max-w-[180px] truncate font-medium text-slate-100 hover:text-volt">
+            {player.name}
+          </span>
+          {player.injuryStatus && (
+            <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
+              {player.injuryStatus}
+            </span>
+          )}
+          {player.trendCount ? (
+            <TrendingUp className="h-3.5 w-3.5 text-lime-400" />
+          ) : null}
+        </Link>
+      </td>
+      <td className="px-2 py-2.5">
+        <PositionBadge position={player.position} />
+      </td>
+      <td className="px-2 py-2.5 text-xs text-slate-400">
+        {player.team ?? "FA"}
+      </td>
+      <td className="px-2 py-2.5 text-right tabular-nums text-slate-300">
+        {formatPts(player.value.ppg)}
+      </td>
+      <td className="px-2 py-2.5 text-right tabular-nums">
+        <span
+          className={cn(
+            player.projection?.source === "espn"
+              ? "text-slate-200"
+              : "text-slate-500"
+          )}
+        >
+          {formatPts(player.projection?.ppg)}
+        </span>
+        {player.projection?.source === "espn" && (
+          <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-volt align-middle" />
+        )}
+      </td>
+      <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
+        {player.value.games || "—"}
+      </td>
+      <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
+        {player.posRank ? `#${player.posRank}` : "—"}
+      </td>
+      <td className="px-2 py-2.5 text-center tabular-nums text-slate-400">
+        {player.byeWeek ? `W${player.byeWeek}` : "—"}
+      </td>
+      <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
+        {player.age ?? "—"}
+      </td>
+      <td className="px-2 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className={cn("w-8 text-right font-display text-lg tabular-nums", scoreColor(player.value.score))}>
+            {player.value.score ?? "—"}
+          </span>
+          {player.valueTrend ? (
+            <span
+              className={cn(
+                "text-[10px] font-bold",
+                player.valueTrend > 0 ? "text-emerald-400" : "text-rose-400"
+              )}
+            >
+              {player.valueTrend > 0 ? "▲" : "▼"}
+              {Math.abs(player.valueTrend)}
+            </span>
+          ) : null}
+          <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-slate-800 sm:block">
+            {player.value.score !== null && (
+              <div
+                className={cn("h-full rounded-full", scoreBarColor(player.value.score))}
+                style={{ width: `${player.value.score}%` }}
+              />
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="py-2.5 pl-2 pr-4 text-xs text-slate-500">
+        {player.value.tier}
+      </td>
+    </tr>
   );
 }
 
@@ -296,7 +394,7 @@ function SortButton({
 }: {
   label: string;
   active: boolean;
-  dir: "asc" | "desc";
+  dir: SortDir;
   onClick: () => void;
 }) {
   return (

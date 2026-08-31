@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlayerSummaries, searchPlayerSummaries } from "@/lib/nfl-data";
+import {
+  getPlayerSummaries,
+  listPlayerSummaries,
+  searchPlayerSummaries,
+} from "@/lib/nfl-data";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +16,28 @@ export async function GET(req: NextRequest) {
       const summaries = await getPlayerSummaries();
       const players = summaries.filter((p) => idSet.has(p.id));
       return NextResponse.json({ ok: true, players, total: players.length });
+    }
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    if (pageParam !== null || pageSizeParam !== null) {
+      const page = Number(pageParam);
+      const pageSize = Number(pageSizeParam);
+      const result = await listPlayerSummaries({
+        q: searchParams.get("q") ?? undefined,
+        pos: searchParams.get("pos") ?? undefined,
+        sort: searchParams.get("sort") ?? undefined,
+        dir: searchParams.get("dir") ?? undefined,
+        page: Number.isFinite(page) && pageParam !== null ? page : undefined,
+        pageSize:
+          Number.isFinite(pageSize) && pageSizeParam !== null ? pageSize : undefined,
+      });
+      return NextResponse.json({
+        ok: true,
+        players: result.players,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      });
     }
     const q = searchParams.get("q") ?? "";
     const pos = searchParams.get("pos") ?? "";

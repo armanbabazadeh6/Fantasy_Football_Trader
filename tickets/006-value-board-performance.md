@@ -2,6 +2,7 @@
 
 **Priority:** Medium
 **Depends on:** Nothing
+**Status:** Complete (/api/players paged mode with server-side sort/filter; page shell renders 50 rows server-side, infinite scroll + Load more; URL params synced via replaceState; measured 6.02MB/8.2s cold before vs 141KB/~600ms warm after; smoke + build pass)
 
 ## Goal
 
