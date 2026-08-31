@@ -1,5 +1,6 @@
 # Ticket 001: Full UI Design Refresh (impeccable pass)
 
+**Status:** Complete (design pass shipped: focus rings, placeholder contrast, play-flow how-it-works, player page skeletons, row hover cleanup; detector clean)
 **Priority:** High
 **Scope:** All user-facing pages
 **Skill:** Load `impeccable` before starting this ticket

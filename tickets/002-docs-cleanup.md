@@ -1,5 +1,6 @@
 # Ticket 002: README and docs cleanup (stop-slop pass)
 
+**Status:** Complete (144 lines, zero em dashes, commands verified, structure tree current, claims replaced with audit numbers)
 **Priority:** Medium
 **Scope:** README.md, ticket docs
 **Skill:** Load `stop-slop` before starting this ticket
