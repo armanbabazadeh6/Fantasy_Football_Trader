@@ -106,6 +106,12 @@ export default async function PlayerPage({
                   {player.name}
                 </h1>
                 <WatchStar playerId={player.id} playerName={player.name} />
+                <Link
+                  href={`/compare?a=${player.id}`}
+                  className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-volt/40 hover:text-volt"
+                >
+                  Compare
+                </Link>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <PositionBadge position={player.position} />
