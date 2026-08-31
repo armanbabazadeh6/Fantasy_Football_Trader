@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import { NewsCard } from "@/components/news-card";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -30,6 +31,49 @@ export default async function PlayerPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <Link
+        href="/players"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-volt"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        All players
+      </Link>
+      <Suspense fallback={<PlayerPageSkeleton />}>
+        <PlayerContent id={id} />
+      </Suspense>
+    </div>
+  );
+}
+
+function PlayerPageSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6">
+      <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="h-16 w-16 rounded-full bg-slate-800" />
+            <div className="space-y-3">
+              <div className="h-9 w-52 rounded bg-slate-800" />
+              <div className="h-4 w-36 rounded bg-slate-800/70" />
+            </div>
+          </div>
+          <div className="ml-auto space-y-2">
+            <div className="ml-auto h-14 w-24 rounded bg-slate-800" />
+            <div className="ml-auto h-3 w-28 rounded bg-slate-800/70" />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="h-72 rounded-xl border border-white/5 bg-slate-900/60" />
+        <div className="h-72 rounded-xl border border-white/5 bg-slate-900/60" />
+      </div>
+    </div>
+  );
+}
+
+async function PlayerContent({ id }: { id: string }) {
   const detail = await getPlayerDetail(id);
   if (!detail) notFound();
 
@@ -81,15 +125,7 @@ export default async function PlayerPage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <Link
-        href="/players"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-volt"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        All players
-      </Link>
-
+    <>
       <div className="animate-scale-in rounded-2xl border border-white/5 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex items-center gap-5">
@@ -320,7 +356,7 @@ export default async function PlayerPage({
           </div>
         </section>
       )}
-    </div>
+    </>
   );
 }
 

@@ -100,7 +100,7 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
             if (results.length > 0) setOpen(true);
           }}
           placeholder="Search a player..."
-          className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none"
+          className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
         />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-volt" />}
       </div>

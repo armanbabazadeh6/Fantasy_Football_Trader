@@ -292,7 +292,7 @@ export default function LeaguePage() {
             }}
             placeholder={platform === "ESPN" ? "e.g. 359217243" : "e.g. 987654321098765432"}
             inputMode="numeric"
-            className="min-w-[220px] flex-1 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
+            className="min-w-[220px] flex-1 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-volt/50 focus:outline-none"
           />
           <button
             type="button"
@@ -345,7 +345,7 @@ export default function LeaguePage() {
                 placeholder="AEABjAI..."
                 rows={2}
                 spellCheck={false}
-                className="w-full resize-y rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
+                className="w-full resize-y rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 focus:border-volt/50 focus:outline-none"
               />
             </div>
             <div>
@@ -357,7 +357,7 @@ export default function LeaguePage() {
                 onChange={(event) => setSwid(event.target.value)}
                 placeholder="{8C5F9A61-...}"
                 spellCheck={false}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-volt/50 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 focus:border-volt/50 focus:outline-none"
               />
             </div>
           </div>

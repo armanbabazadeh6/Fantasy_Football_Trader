@@ -46,7 +46,7 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search headlines..."
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none"
+            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-1.5">

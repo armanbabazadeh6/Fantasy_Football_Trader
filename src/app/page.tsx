@@ -17,6 +17,7 @@ import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/section-heading";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { computeAllPlayers, getTrendingSummaries } from "@/lib/nfl-data";
+import { cn } from "@/lib/utils";
 import { fetchNews } from "@/lib/news";
 import { currentStatSeason } from "@/lib/sleeper";
 
@@ -25,16 +26,19 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   {
     icon: Search,
+    down: "1ST DOWN",
     title: "Build the Trade",
     text: "Search any NFL player and stack both sides of the deal. Pull your real league roster for full context.",
   },
   {
     icon: Brain,
+    down: "2ND DOWN",
     title: "Let the Engine Think",
     text: "A transparent value engine weighs two seasons of PPR stats, weekly consistency, age curves, injuries, and trending movement. The AI analyst then reads everything and argues its case.",
   },
   {
     icon: Trophy,
+    down: "TOUCHDOWN",
     title: "Get the Verdict",
     text: "Accept, counter, or decline — with a confidence score, the key factors that drove the call, and concrete counter-offer ideas.",
   },
@@ -207,25 +211,35 @@ export default async function HomePage() {
           title="HOW IT WORKS"
           subtitle="Facts first, AI second — the analysis cites real numbers, not vibes"
         />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <Reveal key={step.title} delay={index * 120}>
-              <div className="card-hover h-full rounded-xl border border-white/5 bg-slate-900/60 p-5">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-volt/30 bg-volt/10">
-                    <step.icon className="h-4 w-4 text-volt" />
-                  </span>
-                  <span className="font-display text-2xl text-slate-600">
-                    0{index + 1}
-                  </span>
+        <div className="relative">
+          <div className="absolute left-7 right-7 top-7 hidden border-t-2 border-dashed border-white/15 lg:block" />
+          <div className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-6">
+            {STEPS.map((step, index) => (
+              <Reveal key={step.down} delay={index * 140}>
+                <div className="flex flex-col items-center text-center md:items-start md:text-left">
+                  <div
+                    className={cn(
+                      "relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 bg-slate-950",
+                      step.down === "TOUCHDOWN"
+                        ? "border-volt bg-volt/10"
+                        : "border-dashed border-volt/40"
+                    )}
+                  >
+                    <step.icon className="h-6 w-6 text-volt" />
+                  </div>
+                  <p className="mt-4 font-display text-base tracking-[0.25em] text-volt">
+                    {step.down}
+                  </p>
+                  <h3 className="mt-1.5 font-display text-2xl tracking-wide text-slate-100">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
+                    {step.text}
+                  </p>
                 </div>
-                <h3 className="mt-3 font-display text-xl tracking-wide text-slate-100">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">{step.text}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -241,13 +255,13 @@ export default async function HomePage() {
                 Stop guessing. Get a data-backed verdict in seconds — with the
                 reasoning to take back to your league chat.
               </p>
-              <Link
-                href="/analyzer"
-                className="animate-glow mt-6 inline-flex items-center gap-2 rounded-lg bg-volt px-6 py-3 text-sm font-bold text-slate-950 transition-all hover:brightness-110"
-              >
-                Run the Analysis
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            <Link
+              href="/analyzer"
+              className="animate-glow mt-6 inline-flex items-center gap-2 rounded-lg bg-volt px-6 py-3 text-sm font-bold text-slate-950 transition-all hover:brightness-110 hover:shadow-[0_10px_40px_-10px_rgba(163,230,53,0.5)]"
+            >
+              Run the Analysis
+              <ArrowRight className="h-4 w-4" />
+            </Link>
             </div>
           </div>
         </Reveal>
