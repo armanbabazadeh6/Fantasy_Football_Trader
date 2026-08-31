@@ -4,6 +4,8 @@ import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, statSeasons } from "
 import { fetchTeamByeWeeks } from "./schedule";
 import { aggregateSeason } from "./fantasy";
 import { computePlayerValue } from "./value-engine";
+import { computeValueTrends, getPlayerValueHistory, recordDailyScores } from "./value-history";
+import { getDb } from "./db";
 import type {
   NFLPlayer,
   NewsItem,
@@ -29,7 +31,52 @@ interface CoreData {
 
 let corePromise: Promise<CoreData> | null = null;
 
+let backgroundStarted = false;
+
+async function runBackgroundCycle(): Promise<void> {
+  const db = getDb();
+  const info = db
+    .prepare("INSERT INTO refresh_log (started_at) VALUES (?)")
+    .run(new Date().toISOString());
+  const logId = Number(info.lastInsertRowid);
+  try {
+    const computed = await computeAllPlayers();
+    const scores = new Map<string, number>();
+    for (const [id, entry] of computed.entries()) {
+      if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
+    }
+    const recorded = recordDailyScores(scores);
+    const news = await fetchNews();
+    await getTrendingSummaries(30);
+    db.prepare(
+      "UPDATE refresh_log SET finished_at = ?, players = ?, news = ?, ok = 1 WHERE id = ?"
+    ).run(new Date().toISOString(), recorded, news.length, logId);
+    console.log(
+      `[fft] background refresh ok — ${recorded} value snapshots, ${news.length} news items`
+    );
+  } catch (err) {
+    db.prepare("UPDATE refresh_log SET finished_at = ?, ok = 0 WHERE id = ?").run(
+      new Date().toISOString(),
+      logId
+    );
+    console.error("[fft] background refresh failed:", err);
+  }
+}
+
+export function startBackgroundRefresh(): void {
+  if (backgroundStarted) return;
+  backgroundStarted = true;
+  const intervalMs = 2 * 60 * 60 * 1000;
+  setTimeout(() => {
+    runBackgroundCycle().catch(() => {});
+    setInterval(() => {
+      runBackgroundCycle().catch(() => {});
+    }, intervalMs);
+  }, 30 * 1000);
+}
+
 export async function loadCoreData(): Promise<CoreData> {
+  startBackgroundRefresh();
   corePromise ??= (async () => {
     const [players, trending] = await Promise.all([
       fetchAllPlayers(),
@@ -122,10 +169,20 @@ function toSummary(entry: ComputedPlayer): PlayerSummary {
 
 export async function getPlayerSummaries(): Promise<PlayerSummary[]> {
   const [map, byes] = await Promise.all([computeAllPlayers(), fetchTeamByeWeeks()]);
+  const scores = new Map<string, number>();
+  for (const [id, entry] of map.entries()) {
+    if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
+  }
+  recordDailyScores(scores);
+  const trends = computeValueTrends(scores);
   const summaries = Array.from(map.values()).map((entry) => {
     const summary = toSummary(entry);
     if (entry.player.team && byes[entry.player.team]) {
       summary.byeWeek = byes[entry.player.team];
+    }
+    const trend = trends.get(entry.player.id);
+    if (trend !== undefined) {
+      summary.valueTrend = trend;
     }
     return summary;
   });
@@ -210,6 +267,7 @@ export interface PlayerDetailData {
   seasons: PlayerSeasonAgg[];
   news: NewsItem[];
   trendCount: number;
+  valueHistory: { date: string; score: number }[];
 }
 
 export async function getPlayerDetail(id: string): Promise<PlayerDetailData | null> {
@@ -224,11 +282,18 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
   if (entry.player.team && byes[entry.player.team]) {
     summary.byeWeek = byes[entry.player.team];
   }
+  if (typeof entry.value.score === "number") {
+    const scores = new Map<string, number>([[id, entry.value.score]]);
+    const trends = computeValueTrends(scores);
+    const trend = trends.get(id);
+    if (trend !== undefined) summary.valueTrend = trend;
+  }
   return {
     summary,
     player: entry.player,
     seasons: entry.aggs,
     news: matchNewsForPlayer(news, entry.player, 12, 120),
     trendCount: entry.trendCount,
+    valueHistory: getPlayerValueHistory(id),
   };
 }

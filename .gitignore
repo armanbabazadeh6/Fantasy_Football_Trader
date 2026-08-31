@@ -26,6 +26,9 @@ yarn-error.log*
 # data cache
 /.cache
 
+# local database
+/data
+
 # dev server log
 dev-server.log
 

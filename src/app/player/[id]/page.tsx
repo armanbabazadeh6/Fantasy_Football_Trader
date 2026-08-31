@@ -5,6 +5,7 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 import { NewsCard } from "@/components/news-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
+import { TrendSparkline } from "@/components/trend-sparkline";
 import { WatchStar } from "@/components/watch-star";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { getPlayerDetail } from "@/lib/nfl-data";
@@ -32,7 +33,7 @@ export default async function PlayerPage({
   const detail = await getPlayerDetail(id);
   if (!detail) notFound();
 
-  const { player, seasons, news, summary, trendCount } = detail;
+  const { player, seasons, news, summary, valueHistory, trendCount } = detail;
   const value = summary.value;
   const latest = seasons.find((s) => s.games > 0);
   const breakdown = value.breakdown;
@@ -131,6 +132,25 @@ export default async function PlayerPage({
                 />
               )}
             </div>
+            {summary.valueTrend !== undefined && (
+              <p
+                className={cn(
+                  "mt-2 text-xs font-semibold",
+                  summary.valueTrend > 0 ? "text-emerald-300" : "text-rose-300"
+                )}
+              >
+                {summary.valueTrend > 0 ? "▲" : "▼"} {Math.abs(summary.valueTrend)} since last
+                snapshot
+              </p>
+            )}
+            {valueHistory.length > 1 && (
+              <div className="mt-3 border-t border-white/5 pt-3">
+                <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">
+                  Value history ({valueHistory.length} snapshots)
+                </p>
+                <TrendSparkline data={valueHistory} />
+              </div>
+            )}
             {value.ppg !== null && (
               <p className="mt-2 text-xs text-slate-500">
                 {formatPts(value.ppg)} weighted pts/game · {value.games} games last season

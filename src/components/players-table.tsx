@@ -204,6 +204,17 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
                     <span className={cn("w-8 text-right font-display text-lg tabular-nums", scoreColor(player.value.score))}>
                       {player.value.score ?? "—"}
                     </span>
+                    {player.valueTrend ? (
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold",
+                          player.valueTrend > 0 ? "text-emerald-400" : "text-rose-400"
+                        )}
+                      >
+                        {player.valueTrend > 0 ? "▲" : "▼"}
+                        {Math.abs(player.valueTrend)}
+                      </span>
+                    ) : null}
                     <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-slate-800 sm:block">
                       {player.value.score !== null && (
                         <div

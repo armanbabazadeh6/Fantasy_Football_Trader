@@ -101,6 +101,7 @@ export interface PlayerSummary {
   trendCount?: number;
   byeWeek?: number;
   espnSeason?: EspnSeasonStat;
+  valueTrend?: number;
 }
 
 export interface PlayerBundle extends PlayerSummary {

@@ -4,6 +4,8 @@ import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/n
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
+import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
+import { getDb } from "@/lib/db";
 import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
 import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import type { LeagueTeam, PlayerSummary } from "@/types";
@@ -271,6 +273,20 @@ async function unitTests(): Promise<void> {
     "trade proposer stays quiet with nothing spare to offer",
     proposeTrades([noDepth, them], 6).length === 0
   );
+
+  const db = getDb();
+  db.exec("DELETE FROM value_history");
+  db.prepare(
+    "INSERT INTO value_history (player_id, date, score) VALUES ('smoke-a', '2000-01-01', 40)"
+  ).run();
+  recordDailyScores(new Map([["smoke-a", 45]]));
+  const trendMap = computeValueTrends(new Map([["smoke-a", 45]]));
+  check(
+    "value history records snapshots and computes deltas",
+    trendMap.get("smoke-a") === 5,
+    `delta=${trendMap.get("smoke-a")}`
+  );
+  db.prepare("DELETE FROM value_history WHERE player_id = 'smoke-a'").run();
 }
 
 async function integrationTests(): Promise<void> {
