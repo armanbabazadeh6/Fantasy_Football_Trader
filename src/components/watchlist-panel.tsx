@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Eye, TriangleAlert } from "lucide-react";
+import { NewBadge } from "@/components/new-badge";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { WatchStar } from "@/components/watch-star";
@@ -14,6 +15,14 @@ import type { NewsItem, PlayerSummary } from "@/types";
 export function WatchlistPanel({ news }: { news: NewsItem[] }) {
   const [players, setPlayers] = useState<PlayerSummary[] | null>(null);
   const [watched, setWatched] = useState(false);
+  const [lastVisit, setLastVisit] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setLastVisit(localStorage.getItem("fft.lastVisit"));
+    } catch {
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +78,10 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
           const matches = news.filter((item) =>
             titleMentionsPlayer(player.name, item.title, item.summary)
           );
+          const newCount = matches.filter(
+            (item) =>
+              item.firstSeen && (!lastVisit || item.firstSeen > lastVisit)
+          ).length;
           const injured = Boolean(player.injuryStatus);
           return (
             <div
@@ -89,6 +102,11 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
                   >
                     <span className="truncate">{player.name}</span>
                     <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
+                    {newCount > 0 && (
+                      <span className="shrink-0 rounded bg-volt px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
+                        {newCount} new
+                      </span>
+                    )}
                   </Link>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     <PositionBadge position={player.position} />
@@ -115,12 +133,15 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
               {matches.length > 0 && (
                 <ul className="mt-3 space-y-1 border-t border-white/5 pt-3">
                   {matches.slice(0, 2).map((item) => (
-                    <li key={item.id}>
+                    <li key={item.id} className="flex items-center gap-1.5">
+                      {item.firstSeen && (!lastVisit || item.firstSeen > lastVisit) && (
+                        <NewBadge firstSeen={item.firstSeen} />
+                      )}
                       <a
                         href={item.link || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-1.5 text-xs leading-snug text-slate-400 hover:text-slate-200"
+                        className="flex min-w-0 items-start gap-1.5 text-xs leading-snug text-slate-400 hover:text-slate-200"
                       >
                         <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" />
                         <span className="truncate">{item.title}</span>

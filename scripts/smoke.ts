@@ -5,6 +5,7 @@ import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { restOfSeasonGames } from "@/lib/schedule";
 import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
+import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
@@ -329,6 +330,36 @@ async function unitTests(): Promise<void> {
   db.prepare("DELETE FROM projections WHERE player_id = 'smoke-proj'").run();
   db.exec("DELETE FROM projections");
   check("projections sync flag true when empty", projectionsNeedSync());
+
+  check(
+    "news classifier routes categories",
+    classifyNews("Patrick Mahomes questionable for Week 1 with ankle injury") === "injury" &&
+      classifyNews("Bears acquire edge rusher in blockbuster trade") === "transaction" &&
+      classifyNews("Rookie named starter after camp battle") === "depth" &&
+      classifyNews("Ten breakout candidates for 2026") === "performance" &&
+      classifyNews("NFL announces 2026 kickoff times") === "general"
+  );
+  check(
+    "news dedupe keys match across stop-word variants",
+    dedupeKeyFor("Mahomes questionable for Week 1") ===
+      dedupeKeyFor("Mahomes is questionable in Week 1"),
+    `key=${dedupeKeyFor("Mahomes questionable for Week 1")}`
+  );
+  const ingested = await ingestNews();
+  check(
+    "news archive ingests live feed",
+    ingested.inserted > 0,
+    `inserted=${ingested.inserted} skipped=${ingested.skipped}`
+  );
+  const injuries = await getArchivedNews({ category: "injury", limit: 50 });
+  const allArchive = await getArchivedNews({ limit: 500 });
+  check(
+    "news archive filters by category",
+    injuries.length > 0 &&
+      injuries.every((item) => item.category === "injury") &&
+      allArchive.length > injuries.length,
+    `archive=${allArchive.length} injuries=${injuries.length}`
+  );
 }
 
 async function integrationTests(): Promise<void> {

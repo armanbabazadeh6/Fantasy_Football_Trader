@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,17 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+
+  useEffect(() => {
+    try {
+      const previous = localStorage.getItem("fft.sessionVisit");
+      if (previous) {
+        localStorage.setItem("fft.lastVisit", previous);
+      }
+      localStorage.setItem("fft.sessionVisit", new Date().toISOString());
+    } catch {
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-950/80 backdrop-blur-md">

@@ -6,9 +6,12 @@ import { NewsCard } from "@/components/news-card";
 import { cn } from "@/lib/utils";
 import type { NewsItem } from "@/types";
 
+const CATEGORIES = ["all", "injury", "transaction", "depth", "suspension", "performance"];
+
 export function NewsBrowser({ items }: { items: NewsItem[] }) {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState("ALL");
+  const [category, setCategory] = useState("all");
 
   const sources = useMemo(() => {
     const counts = new Map<string, number>();
@@ -22,10 +25,11 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
       if (source !== "ALL" && item.source !== source) return false;
+      if (category !== "all" && (item.category ?? "general") !== category) return false;
       if (!q) return true;
       return `${item.title} ${item.summary}`.toLowerCase().includes(q);
     });
-  }, [items, query, source]);
+  }, [items, query, source, category]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -34,8 +38,8 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
           AROUND THE <span className="text-volt">LEAGUE</span>
         </h1>
         <p className="mt-2 text-sm text-slate-400">
-          Live NFL headlines from ESPN, CBS Sports, Yahoo Sports, and
-          ProFootballTalk — the same feed the trade analyzer reads.
+          Every headline archived and categorized, {items.length.toLocaleString()} items on
+          record.
         </p>
       </div>
 
@@ -48,6 +52,23 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
             placeholder="Search headlines..."
             className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+                category === cat
+                  ? "border-volt/40 bg-volt/10 text-volt"
+                  : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button

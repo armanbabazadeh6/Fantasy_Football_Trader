@@ -48,13 +48,14 @@ async function runBackgroundCycle(): Promise<void> {
       if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
     }
     const recorded = recordDailyScores(scores);
-    const news = await fetchNews();
+    const { ingestNews } = await import("./news-archive");
+    const ingested = await ingestNews();
     await getTrendingSummaries(30);
     db.prepare(
       "UPDATE refresh_log SET finished_at = ?, players = ?, news = ?, ok = 1 WHERE id = ?"
-    ).run(new Date().toISOString(), recorded, news.length, logId);
+    ).run(new Date().toISOString(), recorded, ingested.inserted, logId);
     console.log(
-      `[fft] background refresh ok — ${recorded} value snapshots, ${news.length} news items`
+      `[fft] background refresh ok — ${recorded} value snapshots, ${ingested.inserted} new news items`
     );
   } catch (err) {
     db.prepare("UPDATE refresh_log SET finished_at = ?, ok = 0 WHERE id = ?").run(
@@ -265,6 +266,13 @@ export async function getPlayerBundles(ids: string[]): Promise<PlayerBundle[]> {
   return bundles;
 }
 
+async function getArchivedNewsForMatching() {
+  const { getArchivedNews } = await import("./news-archive");
+  const archived = await getArchivedNews({ limit: 500 });
+  if (archived.length > 0) return archived;
+  return fetchNews();
+}
+
 export interface PlayerDetailData {
   summary: PlayerSummary;
   player: NFLPlayer;
@@ -305,7 +313,7 @@ function buildGameLog(
 export async function getPlayerDetail(id: string): Promise<PlayerDetailData | null> {
   const [computed, news, byes, core] = await Promise.all([
     computeAllPlayers(),
-    fetchNews(),
+    getArchivedNewsForMatching(),
     fetchTeamByeWeeks(),
     loadCoreData(),
   ]);

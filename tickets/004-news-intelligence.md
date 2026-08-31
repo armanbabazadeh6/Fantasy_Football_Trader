@@ -2,6 +2,7 @@
 
 **Priority:** High
 **Depends on:** Nothing (SQLite layer exists)
+**Status:** Complete (news_items table with category/dedupe indexes, cross-outlet dedupe on first-6-significant-words, 6-way classifier, /api/news/archive with q/category/since/limit, category chips, NEW badges via fft.lastVisit, watchlist N-new counts, player detail reads archive; ~292 items ingested, 8 dupes skipped, smoke + build pass)
 
 ## Goal
 

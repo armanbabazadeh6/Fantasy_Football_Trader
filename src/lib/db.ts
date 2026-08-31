@@ -49,6 +49,20 @@ export function getDb(): Database.Database {
         fetched_at TEXT NOT NULL,
         PRIMARY KEY (player_id, season)
       );
+      CREATE TABLE IF NOT EXISTS news_items (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        link TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL DEFAULT '',
+        published_at TEXT NOT NULL,
+        first_seen TEXT NOT NULL,
+        summary TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL DEFAULT 'general',
+        dedupe_key TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_news_first_seen ON news_items (first_seen);
+      CREATE INDEX IF NOT EXISTS idx_news_category ON news_items (category);
+      CREATE INDEX IF NOT EXISTS idx_news_dedupe ON news_items (dedupe_key);
     `);
     globalForDb.__fftDb = db;
   }

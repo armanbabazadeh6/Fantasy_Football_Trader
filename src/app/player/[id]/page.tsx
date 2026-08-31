@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import { NewsCard } from "@/components/news-card";
+import { NewBadge } from "@/components/new-badge";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { TrendSparkline } from "@/components/trend-sparkline";
@@ -363,7 +364,13 @@ async function PlayerContent({ id }: { id: string }) {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {news.map((item) => (
-              <NewsCard key={item.id} item={item} />
+              <div key={item.id} className="relative">
+                <NewBadge
+                  firstSeen={item.firstSeen}
+                  className="absolute right-3 top-3 z-10"
+                />
+                <NewsCard item={item} />
+              </div>
             ))}
           </div>
         </section>

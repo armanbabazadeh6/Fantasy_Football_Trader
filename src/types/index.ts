@@ -92,6 +92,8 @@ export interface NewsItem {
   source: string;
   publishedAt: string;
   summary: string;
+  firstSeen?: string;
+  category?: string;
 }
 
 export interface EspnSeasonStat {
