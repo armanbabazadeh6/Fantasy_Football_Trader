@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Link2, Loader2, ShieldCheck, ShieldX, Trophy, UserPlus } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
@@ -139,6 +139,29 @@ export default function LeaguePage() {
     refreshSession();
   }, [refreshSession]);
 
+  const autoConnectTried = useRef(false);
+  const dataRef = useRef<LeagueResponse | null>(null);
+  dataRef.current = data;
+  const platformRef = useRef<Platform>(platform);
+  platformRef.current = platform;
+  const leagueIdRef = useRef(leagueId);
+  leagueIdRef.current = leagueId;
+  const loadLeagueRef = useRef(loadLeague);
+  loadLeagueRef.current = loadLeague;
+
+  useEffect(() => {
+    if (autoConnectTried.current) return;
+    if (!session || session.updatedAt === null) return;
+    if (session.status === "expired") return;
+    if (dataRef.current !== null) return;
+    if (platformRef.current !== "ESPN") return;
+    const target = session.leagueId ?? leagueIdRef.current;
+    if (!target || !/^\d{4,12}$/.test(target)) return;
+    autoConnectTried.current = true;
+    setLeagueId(target);
+    loadLeagueRef.current(target);
+  }, [session]);
+
   function testSession() {
     setTesting(true);
     setTestResult(null);
@@ -197,8 +220,8 @@ export default function LeaguePage() {
     };
   }, [tab, data, trades, tradesLoading, s2, swid]);
 
-  async function loadLeague() {
-    const id = leagueId.trim();
+  async function loadLeague(explicitId?: string) {
+    const id = (explicitId ?? leagueId).trim();
     if (!/^\d{4,12}$/.test(id)) {
       setError("Enter a numeric league ID (found in your league URL).");
       return;
@@ -441,7 +464,7 @@ export default function LeaguePage() {
           />
           <button
             type="button"
-            onClick={loadLeague}
+            onClick={() => loadLeague()}
             disabled={loading}
             className="flex items-center gap-2 rounded-lg bg-volt px-5 py-3 text-sm font-bold text-slate-950 transition-all enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
