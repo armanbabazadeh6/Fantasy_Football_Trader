@@ -28,7 +28,14 @@ export function WatchStar({ playerId, playerName, className }: WatchStarProps) {
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        setWatched(toggleWatched(playerId));
+        const nowWatched = toggleWatched(playerId);
+        setWatched(nowWatched);
+        fetch("/api/watchlist", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ playerId, watched: nowWatched }),
+        }).catch(() => {
+        });
       }}
       aria-label={watched ? `Remove ${playerName} from watchlist` : `Add ${playerName} to watchlist`}
       className={cn(

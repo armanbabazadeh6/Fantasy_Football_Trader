@@ -22,12 +22,22 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
       setWatched(false);
       let ids: string[] = [];
       try {
-        ids = JSON.parse(localStorage.getItem("fft.watchlist") ?? "[]");
-        if (!Array.isArray(ids)) ids = [];
+        const res = await fetch("/api/watchlist");
+        const data = (await res.json()) as { ok: boolean; ids?: string[] };
+        if (data.ok && Array.isArray(data.ids) && data.ids.length > 0) {
+          ids = data.ids;
+        } else {
+          const local = JSON.parse(localStorage.getItem("fft.watchlist") ?? "[]");
+          if (Array.isArray(local)) ids = local;
+        }
       } catch {
-        ids = [];
+        try {
+          const local = JSON.parse(localStorage.getItem("fft.watchlist") ?? "[]");
+          if (Array.isArray(local)) ids = local;
+        } catch {
+        }
       }
-      if (ids.length === 0) return;
+      if (cancelled || ids.length === 0) return;
       try {
         const res = await fetch(`/api/players?ids=${ids.join(",")}`);
         const data = (await res.json()) as { ok: boolean; players: PlayerSummary[] };

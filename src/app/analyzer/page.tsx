@@ -133,6 +133,20 @@ export default function AnalyzerPage() {
       localStorage.setItem("fft.savedAnalyses", JSON.stringify(next));
     } catch {
     }
+    fetch("/api/analyses", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        give,
+        get,
+        verdict,
+        headline,
+        giveValue: result.engine.giveValue,
+        getValue: result.engine.getValue,
+        aiUsed: Boolean(result.ai),
+      }),
+    }).catch(() => {
+    });
     setJustSaved(true);
   }
 
