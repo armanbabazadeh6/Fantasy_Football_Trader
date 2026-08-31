@@ -177,6 +177,53 @@ export function optimalLineup(
   };
 }
 
+export interface LineupPlayerInfo {
+  id: string;
+  name: string;
+  position: string;
+  team: string | null;
+  points: number;
+  source: "weekly" | "blend" | "season" | "none";
+  opponent: string | null;
+  homeAway: "home" | "away" | null;
+  isBye: boolean;
+  valueScore: number | null;
+  injuryStatus?: string;
+}
+
+export interface TightCall {
+  slot: string;
+  starter: LineupPlayerInfo;
+  backup: LineupPlayerInfo;
+  margin: number;
+}
+
+export function eligibleForSlot(position: string, slot: string): boolean {
+  if (slot === "FLEX") return ["RB", "WR", "TE"].includes(position);
+  return position === slot;
+}
+
+export function computeTightCalls(
+  starters: { slot: string; player: LineupPlayerInfo | null }[],
+  bench: LineupPlayerInfo[]
+): TightCall[] {
+  const calls: TightCall[] = [];
+  for (const entry of starters) {
+    if (!entry.player) continue;
+    const backup = bench
+      .filter((player) => eligibleForSlot(player.position, entry.slot))
+      .sort((a, b) => b.points - a.points)[0];
+    if (!backup) continue;
+    calls.push({
+      slot: entry.slot,
+      starter: entry.player,
+      backup,
+      margin: Math.round((entry.player.points - backup.points) * 10) / 10,
+    });
+  }
+  return calls.sort((a, b) => a.margin - b.margin);
+}
+
 const UPGRADE_THRESHOLD = 3;
 
 export function proposeTrades(

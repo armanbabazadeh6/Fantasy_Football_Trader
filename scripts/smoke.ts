@@ -20,7 +20,7 @@ import { decryptSecret, encryptSecret, mergeSetCookies } from "@/lib/espn-sessio
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
-import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
+import { findTradePartners, optimalLineup, powerRankings, proposeTrades, computeTightCalls, eligibleForSlot } from "@/lib/league-intel";
 import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import type { LeagueTeam, PlayerSummary } from "@/types";
 import {
@@ -623,6 +623,44 @@ async function integrationTests(): Promise<void> {
     qBoard.players.every((p) => p.name.toLowerCase().includes("mahomes")),
     `matches=${qBoard.players.length}`
   );
+
+  check(
+    "slot eligibility: flex takes RB/WR/TE, others exact",
+    eligibleForSlot("RB", "FLEX") && eligibleForSlot("WR", "FLEX") && eligibleForSlot("TE", "FLEX") &&
+      !eligibleForSlot("QB", "FLEX") && !eligibleForSlot("K", "FLEX") &&
+      eligibleForSlot("QB", "QB") && !eligibleForSlot("RB", "QB")
+  );
+
+  const lp = (id: string, name: string, position: string, points: number) => ({
+    id, name, position, team: null, points,
+    source: "weekly" as const, opponent: null, homeAway: null,
+    isBye: false, valueScore: 80,
+  });
+  const tight = computeTightCalls(
+    [
+      { slot: "QB", player: lp("q1", "Starter QB", "QB", 21.2) },
+      { slot: "RB", player: lp("r1", "Lead back", "RB", 18.0) },
+      { slot: "FLEX", player: lp("w1", "Slot receiver", "WR", 12.1) },
+    ],
+    [
+      lp("q2", "Backup QB", "QB", 12.8),
+      lp("r2", "Change of pace", "RB", 9.0),
+      lp("w2", "Bench wideout", "WR", 11.9),
+    ]
+  );
+  check(
+    "tight calls pair each slot with its best eligible backup",
+    tight.length === 3 &&
+      tight[0].slot === "FLEX" && tight[0].backup.name === "Bench wideout" && tight[0].margin === 0.2 &&
+      tight.find((c) => c.slot === "QB")?.backup.name === "Backup QB" &&
+      tight.find((c) => c.slot === "RB")?.backup.name === "Change of pace",
+    tight.map((c) => `${c.slot}:${c.margin}`).join(", ")
+  );
+  const tightNone = computeTightCalls(
+    [{ slot: "QB", player: lp("q1", "Starter QB", "QB", 25) }],
+    [lp("r2", "Bench back", "RB", 15)]
+  );
+  check("tight calls skip slots with no eligible backup", tightNone.length === 0);
 
   const byes = await fetchTeamByeWeeks();
   const byeValues = Object.values(byes);
