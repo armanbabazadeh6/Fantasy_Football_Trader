@@ -420,7 +420,7 @@ export default function LeaguePage() {
                     ? "border-volt/40 bg-volt/10 text-volt"
                     : available
                       ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
-                      : "cursor-not-allowed border-white/5 text-slate-700"
+                      : "cursor-not-allowed border-white/5 text-slate-500"
                 )}
               >
                 {t.label}
