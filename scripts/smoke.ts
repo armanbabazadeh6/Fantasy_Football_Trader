@@ -7,8 +7,15 @@ import { restOfSeasonGames } from "@/lib/schedule";
 import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
 import { getOpsReport } from "@/lib/ops";
+import {
+  getEspnSessionCookie,
+  getEspnSessionState,
+  recordEspnSessionResult,
+  saveEspnSessionCookie,
+} from "@/lib/espn-session";
 import { createSessionToken, timingSafeEqual, verifySessionToken } from "@/lib/session";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { decryptSecret, encryptSecret, mergeSetCookies } from "@/lib/espn-session";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
@@ -102,6 +109,34 @@ async function unitTests(): Promise<void> {
     "rate limiter keys are independent",
     limiter.hit("ip-2"),
     "second ip still allowed"
+  );
+
+  const secretValue = "espn_s2=ABC123; SWID={xyz}";
+  const cipher = encryptSecret(secretValue);
+  check(
+    "espn session cookie encrypted at rest",
+    cipher !== secretValue && cipher.includes(".") && decryptSecret(cipher) === secretValue,
+    `ciphertext ${cipher.slice(0, 24)}...`
+  );
+  const cipherParts = cipher.split(".");
+  const flip = cipherParts[2].endsWith("A") ? "B" : "A";
+  const tampered = [
+    cipherParts[0],
+    cipherParts[1],
+    cipherParts[2].slice(0, -1) + flip,
+  ].join(".");
+  check("espn session decrypt rejects tampered payload", decryptSecret(tampered) === null);
+  check(
+    "set-cookie merge replaces same-name pairs",
+    mergeSetCookies("espn_s2=old; SWID={a}", ["espn_s2=new"]) === "espn_s2=new; SWID={a}"
+  );
+  check(
+    "set-cookie merge appends new names",
+    mergeSetCookies("espn_s2=old", ["foo=bar; Path=/; HttpOnly"]) === "espn_s2=old; foo=bar"
+  );
+  check(
+    "set-cookie merge no-op returns null",
+    mergeSetCookies("a=1", ["a=1"]) === null && mergeSetCookies("a=1", []) === null
   );
 
   const a = extractPPR({ pts_ppr: 18.7 });
@@ -565,6 +600,46 @@ async function integrationTests(): Promise<void> {
     feedStatuses.has("healthy") && [...feedStatuses].every((s) => ["healthy", "quiet", "dead"].includes(s)),
     [...feedStatuses].join(", ")
   );
+
+  const db = getDb();
+  const origSession = db
+    .prepare(
+      "SELECT cookie, league_id, updated_at, last_ok_at, last_fail_at, status FROM espn_session WHERE id = 1"
+    )
+    .get() as {
+    cookie: string;
+    league_id: string | null;
+    updated_at: string;
+    last_ok_at: string | null;
+    last_fail_at: string | null;
+    status: string;
+  } | undefined;
+  try {
+    saveEspnSessionCookie("espn_s2=smoke-test; SWID={smoke}");
+    check(
+      "espn session saved and decrypts",
+      getEspnSessionCookie() === "espn_s2=smoke-test; SWID={smoke}"
+    );
+    recordEspnSessionResult(true);
+    check("espn session ok after success", getEspnSessionState().status === "ok");
+    recordEspnSessionResult(false);
+    check("espn session expired after auth failure", getEspnSessionState().status === "expired");
+  } finally {
+    if (origSession) {
+      db.prepare(
+        "INSERT OR REPLACE INTO espn_session (id, cookie, league_id, updated_at, last_ok_at, last_fail_at, status) VALUES (1, ?, ?, ?, ?, ?, ?)"
+      ).run(
+        origSession.cookie,
+        origSession.league_id,
+        origSession.updated_at,
+        origSession.last_ok_at,
+        origSession.last_fail_at,
+        origSession.status
+      );
+    } else {
+      db.prepare("DELETE FROM espn_session WHERE id = 1").run();
+    }
+  }
 }
 
 async function main(): Promise<void> {

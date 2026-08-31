@@ -177,6 +177,13 @@ function espnHeaders(creds: EspnCredentials): Record<string, string> {
   return headers;
 }
 
+function credsHaveCookie(creds: EspnCredentials): boolean {
+  if (creds.rawCookie && creds.rawCookie.trim().length > 0) return true;
+  if (creds.s2 && creds.s2.trim().length > 0) return true;
+  if (creds.swid && creds.swid.trim().length > 0) return true;
+  return false;
+}
+
 async function espnFetchJson(
   leagueId: string,
   creds: EspnCredentials,
@@ -187,10 +194,37 @@ async function espnFetchJson(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    let effectiveCreds = creds;
+    if (!credsHaveCookie(creds)) {
+      const { getEspnSessionCookie } = await import("./espn-session");
+      const stored = getEspnSessionCookie();
+      if (stored) {
+        effectiveCreds = { rawCookie: stored };
+      }
+    }
     const res = await fetch(
       `${ESPN_FFL_BASE}/seasons/${season}/segments/0/leagues/${leagueId}?view=${views.join("&view=")}`,
-      { headers: espnHeaders(creds), cache: "no-store", signal: controller.signal }
+      { headers: espnHeaders(effectiveCreds), cache: "no-store", signal: controller.signal }
     );
+    if (effectiveCreds.rawCookie) {
+      const { getEspnSessionCookie, mergeSetCookies, saveEspnSessionCookie, recordEspnSessionResult } =
+        await import("./espn-session");
+      const headers = res.headers as Headers & { getSetCookie?: () => string[] };
+      const setCookies = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [];
+      const baseCookie = getEspnSessionCookie() ?? effectiveCreds.rawCookie;
+      if (setCookies.length > 0) {
+        const merged = mergeSetCookies(baseCookie, setCookies);
+        if (merged) {
+          saveEspnSessionCookie(merged);
+          console.log("[fft] ESPN session cookie rotated and saved from Set-Cookie response");
+        }
+      }
+      if (res.status === 401 || res.status === 403) {
+        recordEspnSessionResult(false);
+      } else if (res.ok) {
+        recordEspnSessionResult(true);
+      }
+    }
     if (res.status === 401 || res.status === 403) {
       throw new Error(
         "This ESPN league is private. Add your espn_s2 and SWID cookies to load it."

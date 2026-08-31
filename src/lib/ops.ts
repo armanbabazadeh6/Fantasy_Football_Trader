@@ -62,6 +62,14 @@ export interface OpsReport {
     cacheBytes: number;
   };
   cacheFamilies: CacheFamilyStat[];
+  espnSession: {
+    status: "ok" | "expired" | "untested";
+    hasSession: boolean;
+    leagueId: string | null;
+    updatedAt: string | null;
+    lastOkAt: string | null;
+    lastFailAt: string | null;
+  };
 }
 
 function cacheFamily(fileName: string): string {
@@ -191,6 +199,9 @@ export async function getOpsReport(): Promise<OpsReport> {
   } catch {
   }
 
+  const { getEspnSessionState } = await import("./espn-session");
+  const espnSessionState = getEspnSessionState();
+
   return {
     generatedAt: new Date().toISOString(),
     refreshHistory: refreshRows.map((row) => ({
@@ -233,5 +244,13 @@ export async function getOpsReport(): Promise<OpsReport> {
     cacheFamilies: [...cache.families.values()].sort((a, b) =>
       a.family.localeCompare(b.family)
     ),
+    espnSession: {
+      status: espnSessionState.status,
+      hasSession: espnSessionState.updatedAt !== null,
+      leagueId: espnSessionState.leagueId,
+      updatedAt: espnSessionState.updatedAt,
+      lastOkAt: espnSessionState.lastOkAt,
+      lastFailAt: espnSessionState.lastFailAt,
+    },
   };
 }

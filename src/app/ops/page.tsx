@@ -171,6 +171,45 @@ export default async function OpsPage() {
         />
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          ESPN session
+        </h2>
+        {report.espnSession.hasSession ? (
+          <>
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
+                report.espnSession.status === "ok"
+                  ? "border-volt/40 bg-volt/10 text-volt"
+                  : report.espnSession.status === "expired"
+                    ? "border-red-400/40 bg-red-400/10 text-red-400"
+                    : "border-amber-400/40 bg-amber-400/10 text-amber-400"
+              )}
+            >
+              {report.espnSession.status}
+            </span>
+            <span className="text-slate-400">
+              saved {ageOfIso(report.espnSession.updatedAt ?? report.generatedAt)} ago
+              {report.espnSession.leagueId
+                ? ` · league ${report.espnSession.leagueId}`
+                : ""}
+              {report.espnSession.lastOkAt && report.espnSession.status === "ok"
+                ? ` · last ok ${ageOfIso(report.espnSession.lastOkAt)} ago`
+                : ""}
+              {report.espnSession.lastFailAt && report.espnSession.status === "expired"
+                ? ` · failed ${ageOfIso(report.espnSession.lastFailAt)} ago`
+                : ""}
+            </span>
+          </>
+        ) : (
+          <span className="text-slate-400">
+            No cookie saved. Paste one on the league page to enable private league
+            access and health checks.
+          </span>
+        )}
+      </div>
+
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <section className="lg:col-span-2">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">

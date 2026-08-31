@@ -55,6 +55,15 @@ async function executeRefreshCycle(logId: number): Promise<void> {
     const { ingestNews } = await import("./news-archive");
     const ingested = await ingestNews();
     await getTrendingSummaries(30);
+    try {
+      const { getEspnSessionState } = await import("./espn-session");
+      const espnState = getEspnSessionState();
+      if (espnState.updatedAt !== null && espnState.leagueId) {
+        const { fetchEspnLeague } = await import("./espn");
+        await fetchEspnLeague(espnState.leagueId, {});
+      }
+    } catch {
+    }
     db.prepare(
       "UPDATE refresh_log SET finished_at = ?, players = ?, news = ?, ok = 1 WHERE id = ?"
     ).run(new Date().toISOString(), recorded, ingested.inserted, logId);

@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Link2, Loader2, Trophy, UserPlus } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Link2, Loader2, ShieldCheck, ShieldX, Trophy, UserPlus } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { findTradePartners, optimalLineup, powerRankings, proposeTrades } from "@/lib/league-intel";
@@ -10,6 +10,14 @@ import type { LeagueResponse, LeagueTrade, TradeProposal, TradesResponse } from 
 
 type Platform = "ESPN" | "SLEEPER";
 type Tab = "standings" | "trades" | "power" | "partners";
+
+interface EspnSessionInfo {
+  status: "ok" | "expired" | "untested";
+  leagueId: string | null;
+  updatedAt: string | null;
+  lastOkAt: string | null;
+  lastFailAt: string | null;
+}
 
 interface StoredLeague {
   platform: Platform;
@@ -113,6 +121,46 @@ export default function LeaguePage() {
     }
   }, []);
 
+  const [session, setSession] = useState<EspnSessionInfo | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [sessionExpiredError, setSessionExpiredError] = useState(false);
+
+  const refreshSession = useCallback(() => {
+    fetch("/api/espn-session")
+      .then((res) => res.json())
+      .then((json: { ok: boolean; session: EspnSessionInfo }) => {
+        if (json.ok) setSession(json.session);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
+
+  function testSession() {
+    setTesting(true);
+    setTestResult(null);
+    const id = leagueId.trim() || session?.leagueId || "";
+    fetch(`/api/espn-session${id ? `?leagueId=${encodeURIComponent(id)}` : ""}`, {
+      method: "POST",
+    })
+      .then(async (res) => {
+        const json = (await res.json()) as {
+          ok: boolean;
+          error?: string;
+          session?: EspnSessionInfo;
+        };
+        if (json.session) setSession(json.session);
+        setTestResult(
+          json.ok ? "Session is alive." : json.error ?? "Session test failed."
+        );
+      })
+      .catch(() => setTestResult("Session test failed."))
+      .finally(() => setTesting(false));
+  }
+
   useEffect(() => {
     if (
       tab !== "trades" ||
@@ -157,14 +205,19 @@ export default function LeaguePage() {
     }
     setLoading(true);
     setError(null);
+    setSessionExpiredError(false);
     const creds = parseEspnCreds(s2, swid);
     try {
-      let json: LeagueResponse & { error?: string };
+      let json: LeagueResponse & { error?: string; sessionExpired?: boolean };
       if (platform === "ESPN") {
         const res = await fetch(`/api/espn-league/${id}`, {
           headers: credsToHeaders(creds),
         });
-        json = (await res.json()) as LeagueResponse;
+        json = (await res.json()) as LeagueResponse & { sessionExpired?: boolean };
+        if (json.sessionExpired) {
+          setSessionExpiredError(true);
+          refreshSession();
+        }
       } else {
         const res = await fetch(`/api/league/${id}`);
         json = (await res.json()) as LeagueResponse;
@@ -176,6 +229,7 @@ export default function LeaguePage() {
       setTab("standings");
       setExpandedTeam(stored?.leagueId === id ? stored.rosterId : null);
       if (platform === "ESPN") {
+        refreshSession();
         syncProjections(id);
       }
       if (platform === "ESPN" && (creds.s2 || creds.rawCookie)) {
@@ -304,6 +358,72 @@ export default function LeaguePage() {
       </div>
 
       <div className="rounded-xl border border-white/5 bg-slate-900/60 p-5">
+        {platform === "ESPN" && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/5 bg-slate-950/60 px-3 py-2.5">
+            <div className="flex items-center gap-2 text-xs">
+              {session?.status === "ok" ? (
+                <ShieldCheck className="h-4 w-4 text-volt" />
+              ) : session?.status === "expired" ? (
+                <ShieldX className="h-4 w-4 text-rose-400" />
+              ) : session?.updatedAt ? (
+                <ShieldX className="h-4 w-4 text-amber-400" />
+              ) : (
+                <ShieldX className="h-4 w-4 text-slate-500" />
+              )}
+              {session?.updatedAt ? (
+                <span className="text-slate-300">
+                  Saved ESPN session:{" "}
+                  {session.status === "ok" ? (
+                    <span className="font-semibold text-volt">alive</span>
+                  ) : session.status === "expired" ? (
+                    <span className="font-semibold text-rose-400">expired</span>
+                  ) : (
+                    <span className="font-semibold text-amber-400">not tested yet</span>
+                  )}
+                  {session.updatedAt ? (
+                    <span className="text-slate-500"> · saved {relativeTime(session.updatedAt)}</span>
+                  ) : null}
+                  {session.lastOkAt && session.status === "ok" ? (
+                    <span className="text-slate-500"> · checked {relativeTime(session.lastOkAt)}</span>
+                  ) : null}
+                </span>
+              ) : (
+                <span className="text-slate-400">
+                  No saved ESPN session. Paste your cookie once below and every
+                  browser on this server can use it.
+                </span>
+              )}
+            </div>
+            {session?.updatedAt ? (
+              <button
+                type="button"
+                onClick={testSession}
+                disabled={testing}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-40"
+              >
+                {testing ? "Testing..." : "Test connection"}
+              </button>
+            ) : null}
+          </div>
+        )}
+        {sessionExpiredError && (
+          <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            The saved ESPN session expired. Re-copy the cookie below once and
+            everything reconnects. The guide is a 60-second job.
+          </div>
+        )}
+        {testResult && (
+          <div
+            className={cn(
+              "mb-4 rounded-lg border px-4 py-3 text-sm",
+              testResult.includes("alive")
+                ? "border-volt/30 bg-volt/10 text-volt"
+                : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+            )}
+          >
+            {testResult}
+          </div>
+        )}
         <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           League ID
         </label>
