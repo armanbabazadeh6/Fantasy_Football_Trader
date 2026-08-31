@@ -6,6 +6,7 @@ import { aggregateSeason, extractPPR } from "./fantasy";
 import { computePlayerValue } from "./value-engine";
 import { computeValueTrends, getPlayerValueHistory, recordDailyScores } from "./value-history";
 import { getDb } from "./db";
+import { attachProjectionContext } from "./projections";
 import type {
   GameLogRow,
   NFLPlayer,
@@ -187,6 +188,7 @@ export async function getPlayerSummaries(): Promise<PlayerSummary[]> {
     }
     return summary;
   });
+  await attachProjectionContext(summaries);
   summaries.sort((a, b) => {
     const av = a.value.score ?? -1;
     const bv = b.value.score ?? -1;
@@ -259,6 +261,7 @@ export async function getPlayerBundles(ids: string[]): Promise<PlayerBundle[]> {
     }
     bundles.push(bundle);
   }
+  await attachProjectionContext(bundles);
   return bundles;
 }
 
@@ -318,6 +321,7 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
     const trend = trends.get(id);
     if (trend !== undefined) summary.valueTrend = trend;
   }
+  await attachProjectionContext([summary]);
   const latestSeason = entry.aggs.find((agg) => agg.games > 0)?.season ?? statSeasons()[0];
   return {
     summary,

@@ -3,6 +3,8 @@ import { aggregateSeason, extractPPR } from "@/lib/fantasy";
 import { computeAllPlayers, getPlayerBundles, getPlayerSummaries } from "@/lib/nfl-data";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
+import { restOfSeasonGames } from "@/lib/schedule";
+import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
@@ -287,6 +289,46 @@ async function unitTests(): Promise<void> {
     `delta=${trendMap.get("smoke-a")}`
   );
   db.prepare("DELETE FROM value_history WHERE player_id = 'smoke-a'").run();
+
+  check(
+    "projection blend weights espn and engine",
+    blendProjection(20, 10).ppg === 15.5 && blendProjection(20, 10).source === "espn",
+    `blend=${blendProjection(20, 10).ppg}`
+  );
+  check(
+    "projection blend falls back to single sources",
+    blendProjection(20, null).ppg === 20 &&
+      blendProjection(null, 12).ppg === 12 &&
+      blendProjection(null, null).ppg === 0
+  );
+  check(
+    "rest of season counts remaining games with byes",
+    restOfSeasonGames(undefined, 0) === 18 &&
+      restOfSeasonGames(9, 0) === 17 &&
+      restOfSeasonGames(3, 5) === 13 &&
+      restOfSeasonGames(8, 5) === 12,
+    `preseason=${restOfSeasonGames(9, 0)} week5-bye8=${restOfSeasonGames(8, 5)}`
+  );
+  const proj = computeProjectionSummary(21.8, 20.75, 5, 0);
+  check(
+    "projection summary computes ros points",
+    proj.rosGames === 17 && proj.rosPoints === Math.round(proj.ppg * 17 * 10) / 10,
+    `ppg=${proj.ppg} ros=${proj.rosPoints} over ${proj.rosGames}`
+  );
+
+  db.prepare("DELETE FROM projections WHERE player_id = 'smoke-proj'").run();
+  db.prepare(
+    "INSERT INTO projections (player_id, season, projected_total, projected_ppg, fetched_at) VALUES ('smoke-proj', ?, 300, 18.5, ?)"
+  ).run(new Date().getFullYear(), new Date().toISOString());
+  const projMap = getEspnProjections();
+  check(
+    "projections roundtrip through sqlite",
+    projMap.get("smoke-proj")?.ppg === 18.5,
+    `ppg=${projMap.get("smoke-proj")?.ppg}`
+  );
+  db.prepare("DELETE FROM projections WHERE player_id = 'smoke-proj'").run();
+  db.exec("DELETE FROM projections");
+  check("projections sync flag true when empty", projectionsNeedSync());
 }
 
 async function integrationTests(): Promise<void> {

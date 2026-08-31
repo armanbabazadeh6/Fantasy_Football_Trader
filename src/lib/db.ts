@@ -41,6 +41,14 @@ export function getDb(): Database.Database {
         news INTEGER,
         ok INTEGER
       );
+      CREATE TABLE IF NOT EXISTS projections (
+        player_id TEXT NOT NULL,
+        season INTEGER NOT NULL,
+        projected_total REAL NOT NULL,
+        projected_ppg REAL NOT NULL,
+        fetched_at TEXT NOT NULL,
+        PRIMARY KEY (player_id, season)
+      );
     `);
     globalForDb.__fftDb = db;
   }

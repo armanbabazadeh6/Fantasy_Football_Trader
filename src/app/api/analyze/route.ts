@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiAnalyzeTrade, aiConfigured, aiModel } from "@/lib/ai";
 import { getPlayerBundles } from "@/lib/nfl-data";
+import { optimalLineup } from "@/lib/league-intel";
 import { computeNeeds, ruleVerdict, sideValue } from "@/lib/value-engine";
 import type { AnalyzeResponse, PlayerBundle } from "@/types";
 
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
       give?: unknown;
       get?: unknown;
       myRoster?: unknown;
+      rosterSlots?: unknown;
     } | null;
 
     const giveIds = Array.isArray(body?.give)
@@ -50,6 +52,10 @@ export async function POST(req: NextRequest) {
     const myRosterIds = Array.isArray(body?.myRoster)
       ? [...new Set(body!.myRoster as string[])]
       : [];
+    const rosterSlots =
+      body?.rosterSlots && typeof body.rosterSlots === "object"
+        ? (body.rosterSlots as Record<string, number>)
+        : null;
 
     if (giveIds.length === 0 || getIds.length === 0) {
       return NextResponse.json(
@@ -79,6 +85,26 @@ export async function POST(req: NextRequest) {
     const verdict = ruleVerdict(giveValue, getValue);
     const needs = computeNeeds(roster);
 
+    let lineupImpact: AnalyzeResponse["engine"]["lineupImpact"];
+    if (rosterSlots && roster.length > 0) {
+      const withProjections = (players: PlayerBundle[]): PlayerBundle[] =>
+        players.map((p) => ({
+          ...p,
+          value: { ...p.value, ppg: p.projection?.ppg ?? p.value.ppg },
+        }));
+      const before = optimalLineup(withProjections(roster), rosterSlots);
+      const afterRoster: PlayerBundle[] = [
+        ...roster.filter((p) => !giveIds.includes(p.id)),
+        ...get,
+      ];
+      const after = optimalLineup(withProjections(afterRoster), rosterSlots);
+      lineupImpact = {
+        before: before.projectedTotal,
+        after: after.projectedTotal,
+        delta: Math.round((after.projectedTotal - before.projectedTotal) * 10) / 10,
+      };
+    }
+
     const promptPayload = {
       league_format: "12-team PPR (1.0 point per reception)",
       perspective:
@@ -90,6 +116,11 @@ export async function POST(req: NextRequest) {
         side_receive_total: getValue,
         difference_receive_minus_send: diff,
         rule_based_verdict: verdict,
+      },
+      rest_of_season: {
+        send_projected_points: give.reduce((s, b) => s + (b.projection?.rosPoints ?? 0), 0),
+        receive_projected_points: get.reduce((s, b) => s + (b.projection?.rosPoints ?? 0), 0),
+        lineup_impact_per_week: lineupImpact?.delta ?? null,
       },
       user_roster_needs: needs,
       user_roster: roster.map(
@@ -105,7 +136,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       give,
       get,
-      engine: { giveValue, getValue, diff, verdict, needs },
+      engine: { giveValue, getValue, diff, verdict, needs, lineupImpact },
       ai,
       aiConfigured: aiConfigured(),
       model: aiConfigured() ? aiModel() : undefined,

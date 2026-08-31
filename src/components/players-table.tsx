@@ -12,7 +12,7 @@ import type { PlayerSummary } from "@/types";
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
 const PAGE_SIZE = 50;
 
-type SortKey = "score" | "ppg" | "games" | "posRank" | "age" | "name";
+type SortKey = "score" | "ppg" | "proj" | "games" | "posRank" | "age" | "name";
 
 export function PlayersTable({ players }: { players: PlayerSummary[] }) {
   const [query, setQuery] = useState("");
@@ -38,6 +38,8 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
           return a.name.localeCompare(b.name) * dir;
         case "ppg":
           return ((a.value.ppg ?? -1) - (b.value.ppg ?? -1)) * dir;
+        case "proj":
+          return ((a.projection?.ppg ?? -1) - (b.projection?.ppg ?? -1)) * dir;
         case "games":
           return (a.value.games - b.value.games) * dir;
         case "posRank":
@@ -137,6 +139,9 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
                 <SortButton label="PPG" active={sortKey === "ppg"} dir={sortDir} onClick={() => toggleSort("ppg")} />
               </th>
               <th className="px-2 py-3 text-right font-semibold">
+                <SortButton label="Proj" active={sortKey === "proj"} dir={sortDir} onClick={() => toggleSort("proj")} />
+              </th>
+              <th className="px-2 py-3 text-right font-semibold">
                 <SortButton label="Gms" active={sortKey === "games"} dir={sortDir} onClick={() => toggleSort("games")} />
               </th>
               <th className="px-2 py-3 text-right font-semibold">
@@ -192,6 +197,20 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-slate-300">
                   {formatPts(player.value.ppg)}
+                </td>
+                <td className="px-2 py-2.5 text-right tabular-nums">
+                  <span
+                    className={cn(
+                      player.projection?.source === "espn"
+                        ? "text-slate-200"
+                        : "text-slate-500"
+                    )}
+                  >
+                    {formatPts(player.projection?.ppg)}
+                  </span>
+                  {player.projection?.source === "espn" && (
+                    <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-volt align-middle" />
+                  )}
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
                   {player.value.games || "—"}

@@ -306,6 +306,18 @@ async function PlayerContent({ id }: { id: string }) {
                 <ProfileRow label="Boom rate (20+ pts)" value={`${Math.round(latest.boomRate * 100)}%`} />
                 <ProfileRow label="Bust rate (<5 pts)" value={`${Math.round(latest.bustRate * 100)}%`} />
                 <ProfileRow label="Weekly std deviation" value={formatPts(latest.stdev)} />
+                {summary.projection && (
+                  <>
+                    <ProfileRow
+                      label={`2026 projection${summary.projection.source === "espn" ? " (ESPN blend)" : " (engine)"}`}
+                      value={`${formatPts(summary.projection.ppg)} pts/g`}
+                    />
+                    <ProfileRow
+                      label="Rest of season"
+                      value={`${summary.projection.rosPoints} pts over ${summary.projection.rosGames} games`}
+                    />
+                  </>
+                )}
               </dl>
             </div>
 

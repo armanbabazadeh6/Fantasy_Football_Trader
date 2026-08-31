@@ -22,6 +22,7 @@ export default async function PlayersPage() {
     trendCount: p.trendCount,
     byeWeek: p.byeWeek,
     valueTrend: p.valueTrend,
+    projection: p.projection,
     value: {
       score: p.value.score,
       tier: p.value.tier,

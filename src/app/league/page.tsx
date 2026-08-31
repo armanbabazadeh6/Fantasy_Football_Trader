@@ -175,6 +175,9 @@ export default function LeaguePage() {
       setTradesError(null);
       setTab("standings");
       setExpandedTeam(stored?.leagueId === id ? stored.rosterId : null);
+      if (platform === "ESPN") {
+        syncProjections(id);
+      }
       if (platform === "ESPN" && (creds.s2 || creds.rawCookie)) {
         try {
           localStorage.setItem(
@@ -208,12 +211,33 @@ export default function LeaguePage() {
       rosterId,
       teamName,
       players,
+      rosterSlots: data?.league.rosterSlots,
     };
     try {
       localStorage.setItem("fft.league", JSON.stringify(payload));
       setStored({ platform, leagueId: payload.leagueId, rosterId, teamName });
     } catch {
     }
+  }
+
+  function syncProjections(id: string) {
+    const creds = parseEspnCreds(s2, swid);
+    fetch("/api/projections/sync", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(creds.s2 ? { "x-espn-s2": creds.s2 } : {}),
+        ...(creds.swid ? { "x-espn-swid": creds.swid } : {}),
+        ...(creds.rawCookie ? { "x-espn-cookie": creds.rawCookie } : {}),
+      },
+      body: JSON.stringify({ leagueId: id }),
+    })
+      .then((res) => res.json())
+      .then((json: { ok: boolean }) => {
+        if (json.ok) console.log("[fft] projections synced");
+      })
+      .catch(() => {
+      });
   }
 
   const power = useMemo(() => (data ? powerRankings(data.teams) : []), [data]);

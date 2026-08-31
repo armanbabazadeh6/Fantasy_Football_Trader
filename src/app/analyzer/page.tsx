@@ -31,6 +31,7 @@ interface LeagueContext {
   leagueId: string;
   rosterId: number;
   teamName: string;
+  rosterSlots?: Record<string, number>;
   players: PlayerSummary[];
 }
 
@@ -99,6 +100,7 @@ export default function AnalyzerPage() {
           give: give.map((p) => p.id),
           get: get.map((p) => p.id),
           myRoster: rosterContext?.players.map((p) => p.id) ?? [],
+          rosterSlots: rosterContext?.rosterSlots,
         }),
       });
       const data = (await res.json()) as AnalyzeResponse & { error?: string };
@@ -440,7 +442,49 @@ export default function AnalyzerPage() {
                     </ul>
                   </div>
                 )}
-                <div className="mt-5 flex flex-wrap items-center gap-2">
+                <div className="mt-4 border-t border-white/5 pt-4">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wide text-slate-100">
+                    <Zap className="h-4 w-4 text-volt" />
+                    REST OF SEASON
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-rose-500/25 bg-rose-500/5 px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                        You send — projected
+                      </p>
+                      <p className="mt-1 font-display text-3xl text-slate-100">
+                        {result.give.reduce((sum, b) => sum + (b.projection?.rosPoints ?? 0), 0).toFixed(0)}
+                        <span className="ml-1 text-sm text-slate-500">pts</span>
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                        You receive — projected
+                      </p>
+                      <p className="mt-1 font-display text-3xl text-slate-100">
+                        {result.get.reduce((sum, b) => sum + (b.projection?.rosPoints ?? 0), 0).toFixed(0)}
+                        <span className="ml-1 text-sm text-slate-500">pts</span>
+                      </p>
+                    </div>
+                  </div>
+                  {result.engine.lineupImpact && (
+                    <p
+                      className={cn(
+                        "mt-3 rounded-lg border px-4 py-3 text-sm font-semibold",
+                        result.engine.lineupImpact.delta >= 0
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                      )}
+                    >
+                      Lineup impact: {result.engine.lineupImpact.delta >= 0 ? "+" : ""}
+                      {result.engine.lineupImpact.delta.toFixed(1)} projected pts/week
+                      ({result.engine.lineupImpact.before.toFixed(1)} →{" "}
+                      {result.engine.lineupImpact.after.toFixed(1)})
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={saveAnalysis}
@@ -738,8 +782,13 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
       </div>
 
       {latest && (
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
           <StatTile label="PPG" value={formatPts(latest.ppg)} />
+          <StatTile
+            label="Proj PPG"
+            value={bundle.projection ? formatPts(bundle.projection.ppg) : "—"}
+            highlight={bundle.projection?.source === "espn"}
+          />
           <StatTile label="Games" value={String(latest.games)} />
           <StatTile label="Pos Rank" value={latest.posRank ? `#${latest.posRank}` : "—"} />
           <StatTile label="Boom%" value={`${Math.round(latest.boomRate * 100)}%`} />
@@ -773,9 +822,22 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string }) {
+function StatTile({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded-lg bg-slate-950/60 px-2.5 py-2 text-center">
+    <div
+      className={cn(
+        "rounded-lg bg-slate-950/60 px-2.5 py-2 text-center",
+        highlight && "ring-1 ring-volt/40"
+      )}
+    >
       <p className="text-sm font-semibold text-slate-200">{value}</p>
       <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
     </div>

@@ -101,6 +101,15 @@ export interface EspnSeasonStat {
   games: number;
 }
 
+export interface ProjectionSummary {
+  ppg: number;
+  espnPpg: number | null;
+  enginePpg: number | null;
+  source: "espn" | "engine";
+  rosPoints: number;
+  rosGames: number;
+}
+
 export interface PlayerSummary {
   id: string;
   name: string;
@@ -116,6 +125,7 @@ export interface PlayerSummary {
   byeWeek?: number;
   espnSeason?: EspnSeasonStat;
   valueTrend?: number;
+  projection?: ProjectionSummary;
 }
 
 export interface PlayerBundle extends PlayerSummary {
@@ -149,6 +159,11 @@ export interface EngineResult {
   diff: number;
   verdict: Verdict;
   needs: string[];
+  lineupImpact?: {
+    before: number;
+    after: number;
+    delta: number;
+  };
 }
 
 export interface AnalyzeResponse {
