@@ -7,6 +7,8 @@ import { restOfSeasonGames } from "@/lib/schedule";
 import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
 import { getOpsReport } from "@/lib/ops";
+import { createSessionToken, timingSafeEqual, verifySessionToken } from "@/lib/session";
+import { createRateLimiter } from "@/lib/rate-limit";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
@@ -62,6 +64,45 @@ function fakeAgg(overrides: Partial<PlayerSeasonAgg> = {}): PlayerSeasonAgg {
 
 async function unitTests(): Promise<void> {
   console.log("\n=== Unit tests (pure functions) ===\n");
+
+  const token = await createSessionToken("secret-abc");
+  check(
+    "session token roundtrips with the signing secret",
+    await verifySessionToken(token, "secret-abc"),
+    `token=${token.slice(0, 12)}...`
+  );
+  check(
+    "session token rejected under a different secret",
+    !(await verifySessionToken(token, "secret-xyz"))
+  );
+  const forged = token.replace(/^\d+/, String(Date.now() + 3600_000));
+  check(
+    "tampered session token rejected",
+    !(await verifySessionToken(forged, "secret-abc"))
+  );
+  check(
+    "session token rejects garbage",
+    !(await verifySessionToken(undefined, "secret-abc")) &&
+      !(await verifySessionToken("nope", "secret-abc")) &&
+      !(await verifySessionToken("999.", "secret-abc"))
+  );
+  check(
+    "timing safe compare matches equal strings only",
+    timingSafeEqual("deadbeef", "deadbeef") && !timingSafeEqual("deadbeef", "deadbeeg") && !timingSafeEqual("deadbeef", "deadbee")
+  );
+
+  const limiter = createRateLimiter(3, 1000);
+  const hits = [limiter.hit("ip-1"), limiter.hit("ip-1"), limiter.hit("ip-1"), limiter.hit("ip-1")];
+  check(
+    "rate limiter blocks after max hits within the window",
+    hits[0] && hits[1] && hits[2] && !hits[3],
+    `hits=${hits.map((h) => (h ? 1 : 0)).join("")}`
+  );
+  check(
+    "rate limiter keys are independent",
+    limiter.hit("ip-2"),
+    "second ip still allowed"
+  );
 
   const a = extractPPR({ pts_ppr: 18.7 });
   check("extractPPR uses pts_ppr when present", a === 18.7, `got ${a}`);

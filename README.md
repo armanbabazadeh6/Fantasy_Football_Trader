@@ -65,6 +65,9 @@ job refreshes data every two hours.
 | `AI_BASE_URL` | No | OpenAI-compatible chat completions endpoint, e.g. `https://api.openference.com/v1` |
 | `AI_API_KEY` | No | API key. Without it, verdicts come from the rule engine only. |
 | `AI_MODEL` | No | Model ID, e.g. `openference/GLM-5.3` |
+| `AUTH_PASSWORD` | No | When set, every page sits behind a password gate. Unset means open access. |
+| `AUTH_SECRET` | No | HMAC key for the session cookie. Falls back to `AUTH_PASSWORD` when empty. |
+| `CRON_SECRET` | No | When set, `POST /api/cron` with header `X-Cron-Secret` triggers a data refresh. |
 
 ## Data sources
 
@@ -96,6 +99,34 @@ npx tsx scripts/espn-live-check.ts <cookie-file> <league-id>
 npx tsx scripts/espn-audit.ts <cookie-file> <league-id>
 ```
 
+## Deployment
+
+The app ships with a Dockerfile and a compose file, sized for a small VPS.
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+SQLite data and the disk cache live in the `fft-data` and `fft-cache`
+volumes, so rebuilds keep player values, projections, and the news archive.
+
+To open it up beyond localhost, set `AUTH_PASSWORD` and `AUTH_SECRET` in
+`.env` and restart. Every route then redirects to `/login` unless the browser
+holds a signed session cookie. `GET /api/health` stays public for uptime
+checks.
+
+The in-process scheduler refreshes data every two hours. To drive refreshes
+from outside instead, set `CRON_SECRET` and call:
+
+```bash
+curl -X POST -H "X-Cron-Secret: $CRON_SECRET" https://your-host/api/cron
+```
+
+A systemd timer or any uptime service works fine for this. Put HTTPS in
+front with a reverse proxy, Caddy or nginx with a certificate, since the
+container itself speaks plain HTTP.
+
 ## Project structure
 
 ```
@@ -104,19 +135,26 @@ src/
     analyzer/             Trade builder and verdict UI
     compare/              Head-to-head comparison
     league/               League intelligence, ESPN and Sleeper
+    login/                Password gate sign-in
     news/                 News browser
+    ops/                  Data pipeline dashboard
     player/[id]/          Player detail with game log
     players/              Value board with CSV export
     waiver/               Trending adds with roster-need badges
     api/
       analyze/            Trade analysis, rule engine + AI
       analyses/           Saved analyses (SQLite)
+      auth/login/         Password sign-in, rate limited
       compare/            Comparison bundles
+      cron/               External refresh trigger, X-Cron-Secret
       espn-league/[id]/   ESPN league + transactions
       export/players/     Value board CSV
+      health/             Uptime endpoint, public
+      news/               players/ trending/ watchlist/
+      ops/health/         Pipeline health report
       league/[id]/       Sleeper league
-      news/ players/ trending/ watchlist/
   components/             Shared UI
+  middleware.ts           Auth gate, active when AUTH_PASSWORD is set
   lib/
     espn.ts               ESPN client, player mapping, cookie handling
     sleeper.ts            Sleeper client
@@ -125,12 +163,18 @@ src/
     value-history.ts      Daily snapshots and trend deltas (SQLite)
     db.ts                 SQLite schema and connection
     nfl-data.ts           Data composition and background scheduler
-    news.ts schedule.ts ai.ts cache.ts share-card.ts
+    news-archive.ts       News archive, dedupe, classification
+    ops.ts                Ops dashboard report
+    projections.ts        ESPN projection sync and blending
+    session.ts            Signed session cookies
+    news.ts schedule.ts ai.ts cache.ts rate-limit.ts share-card.ts
   tickets/                Open work items
 scripts/
   smoke.ts                Test suite
   espn-live-check.ts      Live ESPN verification
   espn-audit.ts           ESPN accuracy audit
+Dockerfile                Multi-stage build with standalone output
+docker-compose.yml        VPS deployment, data and cache volumes
 ```
 
 ## Roadmap

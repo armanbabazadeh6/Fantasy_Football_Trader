@@ -1,0 +1,10 @@
+node_modules
+.next
+.cache
+data
+.git
+.env
+.env.local
+dev-server.log
+.agents
+skills-lock.json

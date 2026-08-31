@@ -1,0 +1,15 @@
+services:
+  fft:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - fft-data:/app/data
+      - fft-cache:/app/.cache
+    restart: unless-stopped
+
+volumes:
+  fft-data:
+  fft-cache:

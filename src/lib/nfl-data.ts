@@ -35,12 +35,16 @@ let corePromise: Promise<CoreData> | null = null;
 
 let backgroundStarted = false;
 
-async function runBackgroundCycle(): Promise<void> {
+function insertRefreshRow(): number {
   const db = getDb();
   const info = db
     .prepare("INSERT INTO refresh_log (started_at) VALUES (?)")
     .run(new Date().toISOString());
-  const logId = Number(info.lastInsertRowid);
+  return Number(info.lastInsertRowid);
+}
+
+async function executeRefreshCycle(logId: number): Promise<void> {
+  const db = getDb();
   try {
     const computed = await computeAllPlayers();
     const scores = new Map<string, number>();
@@ -67,14 +71,25 @@ async function runBackgroundCycle(): Promise<void> {
   }
 }
 
+export function startRefreshCycle(): number {
+  const logId = insertRefreshRow();
+  void executeRefreshCycle(logId);
+  return logId;
+}
+
+export async function runBackgroundCycle(): Promise<void> {
+  const logId = insertRefreshRow();
+  await executeRefreshCycle(logId);
+}
+
 export function startBackgroundRefresh(): void {
   if (backgroundStarted) return;
   backgroundStarted = true;
   const intervalMs = 2 * 60 * 60 * 1000;
   setTimeout(() => {
-    runBackgroundCycle().catch(() => {});
+    startRefreshCycle();
     setInterval(() => {
-      runBackgroundCycle().catch(() => {});
+      startRefreshCycle();
     }, intervalMs);
   }, 30 * 1000);
 }

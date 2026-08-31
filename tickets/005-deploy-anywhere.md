@@ -2,6 +2,7 @@
 
 **Priority:** Medium
 **Depends on:** Nothing
+**Status:** Complete (HMAC session cookie middleware, off by default; /login with 5/min IP rate limit; public /api/health; POST /api/cron with X-Cron-Secret returning the refresh row; multi-stage alpine Dockerfile with standalone output, non-root fft user, /data + /.cache volumes; compose file; README deployment section. Verified end-to-end in a real container: gate redirect, login roundtrip, cron trigger, SQLite written by uid 100)
 
 ## Goal
 
