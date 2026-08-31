@@ -13,7 +13,53 @@ interface ScoreboardEvent {
   season?: { type?: number };
   week?: { number?: number };
   status?: { type?: { completed?: boolean } };
-  competitions?: { competitors?: { team?: { abbreviation?: string } }[] }[];
+  competitions?: {
+    competitors?: {
+      homeAway?: string;
+      team?: { abbreviation?: string };
+    }[];
+  }[];
+}
+
+export interface WeekMatchup {
+  opponent: string;
+  homeAway: "home" | "away";
+}
+
+function normalizeAbbr(abbr?: string): string | null {
+  if (!abbr) return null;
+  const upper = abbr.toUpperCase();
+  return upper === "WSH" ? "WAS" : upper;
+}
+
+export function buildWeekMatchups(
+  events: ScoreboardEvent[],
+  week: number
+): Record<string, WeekMatchup> {
+  const map: Record<string, WeekMatchup> = {};
+  for (const event of events) {
+    if (event.season?.type !== 2) continue;
+    if (event.week?.number !== week) continue;
+    for (const competition of event.competitions ?? []) {
+      const competitors = (competition.competitors ?? [])
+        .map((competitor) => ({
+          abbr: normalizeAbbr(competitor.team?.abbreviation),
+          homeAway: competitor.homeAway === "home" ? ("home" as const) : ("away" as const),
+        }))
+        .filter((competitor) => competitor.abbr !== null);
+      if (competitors.length !== 2) continue;
+      const [a, b] = competitors as { abbr: string; homeAway: "home" | "away" }[];
+      map[a.abbr] = { opponent: b.abbr, homeAway: a.homeAway };
+      map[b.abbr] = { opponent: a.abbr, homeAway: b.homeAway };
+    }
+  }
+  return map;
+}
+
+export async function fetchWeekMatchups(
+  week: number
+): Promise<Record<string, WeekMatchup>> {
+  return buildWeekMatchups(await fetchScoreboard(), week);
 }
 
 async function fetchScoreboard(): Promise<ScoreboardEvent[]> {

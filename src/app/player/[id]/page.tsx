@@ -78,7 +78,7 @@ async function PlayerContent({ id }: { id: string }) {
   const detail = await getPlayerDetail(id);
   if (!detail) notFound();
 
-  const { player, seasons, news, summary, valueHistory, trendCount, gameLog } = detail;
+  const { player, seasons, news, summary, valueHistory, trendCount, gameLog, weekly } = detail;
   const value = summary.value;
   const latest = seasons.find((s) => s.games > 0);
   const breakdown = value.breakdown;
@@ -307,6 +307,20 @@ async function PlayerContent({ id }: { id: string }) {
                 <ProfileRow label="Boom rate (20+ pts)" value={`${Math.round(latest.boomRate * 100)}%`} />
                 <ProfileRow label="Bust rate (<5 pts)" value={`${Math.round(latest.bustRate * 100)}%`} />
                 <ProfileRow label="Weekly std deviation" value={formatPts(latest.stdev)} />
+                {weekly && (
+                  <ProfileRow
+                    label={`Week ${weekly.week} outlook`}
+                    value={
+                      weekly.isBye
+                        ? "BYE"
+                        : `${weekly.points !== null ? `${formatPts(weekly.points)} pts` : "no proj yet"}${
+                            weekly.opponent
+                              ? ` vs ${weekly.opponent}${weekly.homeAway === "home" ? " (home)" : weekly.homeAway === "away" ? " (away)" : ""}`
+                              : ""
+                          }`
+                    }
+                  />
+                )}
                 {summary.projection && (
                   <>
                     <ProfileRow

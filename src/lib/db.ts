@@ -49,6 +49,14 @@ export function getDb(): Database.Database {
         fetched_at TEXT NOT NULL,
         PRIMARY KEY (player_id, season)
       );
+      CREATE TABLE IF NOT EXISTS weekly_projections (
+        player_id TEXT NOT NULL,
+        season INTEGER NOT NULL,
+        week INTEGER NOT NULL,
+        points REAL NOT NULL,
+        fetched_at TEXT NOT NULL,
+        PRIMARY KEY (player_id, season, week)
+      );
       CREATE TABLE IF NOT EXISTS news_items (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,

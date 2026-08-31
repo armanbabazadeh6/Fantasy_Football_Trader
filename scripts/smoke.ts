@@ -1,10 +1,11 @@
 import { fetchAllPlayers, fetchWeeklyStats, fetchTrending, statSeasons } from "@/lib/sleeper";
 import { aggregateSeason, extractPPR } from "@/lib/fantasy";
 import { computeAllPlayers, getPlayerBundles, getPlayerSummaries, listPlayerSummaries } from "@/lib/nfl-data";
+import { buildWeekMatchups } from "@/lib/schedule";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
 import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { restOfSeasonGames } from "@/lib/schedule";
-import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
+import { blendProjection, computeProjectionSummary, extractWeeklyProjections, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
 import { getOpsReport } from "@/lib/ops";
 import {
@@ -137,6 +138,59 @@ async function unitTests(): Promise<void> {
   check(
     "set-cookie merge no-op returns null",
     mergeSetCookies("a=1", ["a=1"]) === null && mergeSetCookies("a=1", []) === null
+  );
+
+  const weeklyStats = extractWeeklyProjections(
+    [
+      { statSourceId: 0, statSplitTypeId: 1, seasonId: 2026, scoringPeriodId: 1, appliedTotal: 22.1 },
+      { statSourceId: 1, statSplitTypeId: 0, seasonId: 2026, appliedTotal: 352.7, appliedAverage: 20.7 },
+      { statSourceId: 1, statSplitTypeId: 1, seasonId: 2026, scoringPeriodId: 1, appliedTotal: 19.3 },
+      { statSourceId: 1, statSplitTypeId: 1, seasonId: 2026, scoringPeriodId: 2, appliedTotal: 21.4 },
+      { statSourceId: 1, statSplitTypeId: 1, seasonId: 2025, scoringPeriodId: 1, appliedTotal: 18.0 },
+      { statSourceId: 1, statSplitTypeId: 1, seasonId: 2026, scoringPeriodId: 0, appliedTotal: 15.0 },
+      { statSourceId: 1, statSplitTypeId: 1, seasonId: 2026, scoringPeriodId: 3, appliedTotal: 0 },
+    ],
+    2026
+  );
+  check(
+    "weekly projection extractor filters to current-season weekly projections",
+    weeklyStats.length === 2 &&
+      weeklyStats[0].week === 1 && weeklyStats[0].points === 19.3 &&
+      weeklyStats[1].week === 2 && weeklyStats[1].points === 21.4,
+    `got ${JSON.stringify(weeklyStats)}`
+  );
+
+  const matchupEvents = [
+    { season: { type: 1 }, week: { number: 1 }, competitions: [{ competitors: [
+      { homeAway: "home", team: { abbreviation: "KC" } },
+      { homeAway: "away", team: { abbreviation: "wsh" } },
+    ] }] },
+    { season: { type: 2 }, week: { number: 1 }, competitions: [{ competitors: [
+      { homeAway: "home", team: { abbreviation: "KC" } },
+      { homeAway: "away", team: { abbreviation: "WSH" } },
+    ] }] },
+    { season: { type: 2 }, week: { number: 1 }, competitions: [{ competitors: [
+      { homeAway: "away", team: { abbreviation: "BUF" } },
+      { homeAway: "home", team: { abbreviation: "LAR" } },
+    ] }] },
+    { season: { type: 2 }, week: { number: 2 }, competitions: [{ competitors: [
+      { homeAway: "home", team: { abbreviation: "KC" } },
+      { homeAway: "away", team: { abbreviation: "BUF" } },
+    ] }] },
+  ];
+  const matchups = buildWeekMatchups(matchupEvents as never, 1);
+  check(
+    "week matchup builder maps both directions with home/away",
+    matchups.KC?.opponent === "WAS" && matchups.KC.homeAway === "home" &&
+      matchups.WAS?.opponent === "KC" && matchups.WAS.homeAway === "away" &&
+      matchups.BUF?.opponent === "LAR" && matchups.BUF.homeAway === "away" &&
+      matchups.LAR?.opponent === "BUF" && matchups.LAR.homeAway === "home",
+    JSON.stringify(matchups)
+  );
+  check(
+    "week matchup builder scopes to requested week",
+    (matchups.KC ? 1 : 0) === 1 && !("CHI" in matchups) && Object.keys(matchups).length === 4,
+    `teams=${Object.keys(matchups).join(",")}`
   );
 
   const a = extractPPR({ pts_ppr: 18.7 });

@@ -13,8 +13,33 @@ interface EspnStatEntry {
   statSourceId?: number;
   statSplitTypeId?: number;
   seasonId?: number;
+  scoringPeriodId?: number;
   appliedTotal?: number;
   appliedAverage?: number;
+}
+
+export interface EspnWeeklyProjection {
+  week: number;
+  points: number;
+}
+
+export function extractWeeklyProjections(
+  stats: EspnStatEntry[] | undefined,
+  season: number
+): EspnWeeklyProjection[] {
+  if (!stats) return [];
+  const out: EspnWeeklyProjection[] = [];
+  for (const stat of stats) {
+    if (stat.statSourceId !== 1) continue;
+    if (stat.statSplitTypeId !== 1) continue;
+    if (stat.seasonId !== season) continue;
+    const week = stat.scoringPeriodId;
+    if (typeof week !== "number" || week < 1 || week > 18) continue;
+    const points = stat.appliedTotal;
+    if (typeof points !== "number" || points <= 0) continue;
+    out.push({ week, points: Math.round(points * 10) / 10 });
+  }
+  return out;
 }
 
 export const PROJECTION_FRESH_MS = 6 * 60 * 60 * 1000;
@@ -72,14 +97,29 @@ export async function saveLeagueProjections(
   const upsert = db.prepare(
     "INSERT INTO projections (player_id, season, projected_total, projected_ppg, fetched_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(player_id, season) DO UPDATE SET projected_total = excluded.projected_total, projected_ppg = excluded.projected_ppg, fetched_at = excluded.fetched_at"
   );
+  const upsertWeekly = db.prepare(
+    "INSERT INTO weekly_projections (player_id, season, week, points, fetched_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(player_id, season, week) DO UPDATE SET points = excluded.points, fetched_at = excluded.fetched_at"
+  );
 
   let count = 0;
+  let weeklyCount = 0;
   const now = new Date().toISOString();
   const run = db.transaction(() => {
     for (const team of league.teams) {
       for (const entry of team.roster?.entries ?? []) {
         const espnPlayer = entry?.playerPoolEntry?.player;
         if (!espnPlayer) continue;
+        const matched = matchEspnPlayer(espnPlayer, indexes);
+        const weekly = extractWeeklyProjections(
+          espnPlayer.stats as EspnStatEntry[] | undefined,
+          season
+        );
+        if (weekly.length > 0 && matched) {
+          for (const w of weekly) {
+            upsertWeekly.run(matched.id, season, w.week, w.points, now);
+            weeklyCount += 1;
+          }
+        }
         const seasonProj = (espnPlayer.stats as EspnStatEntry[] | undefined)?.find(
           (stat) =>
             stat.statSourceId === 1 &&
@@ -88,7 +128,6 @@ export async function saveLeagueProjections(
             (stat.appliedTotal ?? 0) > 0
         );
         if (!seasonProj) continue;
-        const matched = matchEspnPlayer(espnPlayer, indexes);
         if (!matched) continue;
         const ppg =
           typeof seasonProj.appliedAverage === "number" && seasonProj.appliedAverage > 0
@@ -106,6 +145,9 @@ export async function saveLeagueProjections(
     }
   });
   run();
+  if (weeklyCount > 0) {
+    console.log(`[fft] saved ${weeklyCount} weekly projections alongside ${count} season rows`);
+  }
   return count;
 }
 
@@ -149,6 +191,20 @@ export function projectionsNeedSync(): boolean {
     .get(season) as { n: number; latest: string | null };
   if (row.n === 0 || !row.latest) return true;
   return Date.now() - Date.parse(row.latest) > PROJECTION_FRESH_MS;
+}
+
+export function getWeeklyProjection(
+  playerId: string,
+  fromWeek: number
+): { week: number; points: number } | null {
+  const season = espnSeasonYear();
+  const db = getDb();
+  const row = db
+    .prepare(
+      "SELECT week, points FROM weekly_projections WHERE player_id = ? AND season = ? AND week >= ? ORDER BY week ASC LIMIT 1"
+    )
+    .get(playerId, season, fromWeek) as { week: number; points: number } | undefined;
+  return row ? { week: row.week, points: row.points } : null;
 }
 
 export async function attachProjectionContext(

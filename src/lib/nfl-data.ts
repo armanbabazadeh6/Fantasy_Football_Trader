@@ -1,7 +1,7 @@
 import { getCached } from "./cache";
 import { fetchNews, matchNewsForPlayer } from "./news";
 import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, NFL_WEEKS, statSeasons } from "./sleeper";
-import { fetchTeamByeWeeks } from "./schedule";
+import { fetchTeamByeWeeks, fetchWeekMatchups, getCurrentWeek } from "./schedule";
 import { aggregateSeason, extractPPR } from "./fantasy";
 import { computePlayerValue } from "./value-engine";
 import { computeValueTrends, getPlayerValueHistory, recordDailyScores } from "./value-history";
@@ -396,6 +396,13 @@ export interface PlayerDetailData {
   trendCount: number;
   valueHistory: { date: string; score: number }[];
   gameLog: GameLogRow[];
+  weekly?: {
+    week: number;
+    points: number | null;
+    opponent: string | null;
+    homeAway: "home" | "away" | null;
+    isBye: boolean;
+  };
 }
 
 function buildGameLog(
@@ -446,6 +453,22 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
   }
   await attachProjectionContext([summary]);
   const latestSeason = entry.aggs.find((agg) => agg.games > 0)?.season ?? statSeasons()[0];
+
+  const currentWeek = await getCurrentWeek();
+  const nextWeek = Math.max(1, currentWeek + 1);
+  const isBye = summary.byeWeek === nextWeek;
+  const { getWeeklyProjection } = await import("./projections");
+  const projection = getWeeklyProjection(id, nextWeek);
+  const matchups = await fetchWeekMatchups(nextWeek);
+  const matchup = entry.player.team ? matchups[entry.player.team] : undefined;
+  const weekly: PlayerDetailData["weekly"] = {
+    week: projection?.week ?? nextWeek,
+    points: projection ? projection.points : null,
+    opponent: matchup ? matchup.opponent : null,
+    homeAway: matchup ? matchup.homeAway : null,
+    isBye,
+  };
+
   return {
     summary,
     player: entry.player,
@@ -454,5 +477,6 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
     trendCount: entry.trendCount,
     valueHistory: getPlayerValueHistory(id),
     gameLog: buildGameLog(id, latestSeason, core.weeklyBySeason.get(latestSeason) ?? {}),
+    weekly,
   };
 }

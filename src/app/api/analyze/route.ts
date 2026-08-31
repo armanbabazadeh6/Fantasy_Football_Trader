@@ -3,12 +3,21 @@ import { aiAnalyzeTrade, aiConfigured, aiModel } from "@/lib/ai";
 import { getPlayerBundles } from "@/lib/nfl-data";
 import { optimalLineup } from "@/lib/league-intel";
 import { computeNeeds, ruleVerdict, sideValue } from "@/lib/value-engine";
+import { getCurrentWeek, fetchWeekMatchups } from "@/lib/schedule";
+import { getWeeklyProjection } from "@/lib/projections";
 import type { AnalyzeResponse, PlayerBundle } from "@/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-function compactBundle(bundle: PlayerBundle) {
+interface WeekOutlook {
+  week: number;
+  projected_points: number | null;
+  matchup: string | null;
+  is_bye: boolean;
+}
+
+function compactBundle(bundle: PlayerBundle, weekOutlook: WeekOutlook) {
   return {
     name: bundle.name,
     position: bundle.position,
@@ -30,6 +39,7 @@ function compactBundle(bundle: PlayerBundle) {
     })),
     trending_adds_24h: bundle.trendCount ?? 0,
     bye_week: bundle.byeWeek ?? null,
+    week_outlook: weekOutlook,
     recent_news: bundle.news.map((n) => `[${n.source}] ${n.title}`),
   };
 }
@@ -105,12 +115,28 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    const currentWeek = await getCurrentWeek();
+    const nextWeek = Math.max(1, currentWeek + 1);
+    const matchups = await fetchWeekMatchups(nextWeek);
+    const weekOutlookFor = (b: PlayerBundle): WeekOutlook => {
+      const projection = getWeeklyProjection(b.id, nextWeek);
+      const matchup = b.team ? matchups[b.team] : undefined;
+      return {
+        week: nextWeek,
+        projected_points: projection ? projection.points : null,
+        matchup: matchup
+          ? `${matchup.homeAway === "home" ? "vs" : "at"} ${matchup.opponent}`
+          : null,
+        is_bye: b.byeWeek === nextWeek,
+      };
+    };
+
     const promptPayload = {
       league_format: "12-team PPR (1.0 point per reception)",
       perspective:
         "The user is SIDE_SEND. Evaluate whether SIDE_SEND should accept this trade.",
-      side_send: give.map(compactBundle),
-      side_receive: get.map(compactBundle),
+      side_send: give.map((b) => compactBundle(b, weekOutlookFor(b))),
+      side_receive: get.map((b) => compactBundle(b, weekOutlookFor(b))),
       computed_values: {
         side_send_total: giveValue,
         side_receive_total: getValue,
