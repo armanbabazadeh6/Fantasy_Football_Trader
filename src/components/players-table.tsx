@@ -115,6 +115,12 @@ export function PlayersTable({ players }: { players: PlayerSummary[] }) {
             </button>
           ))}
         </div>
+        <a
+          href="/api/export/players"
+          className="ml-auto rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-volt/40 hover:text-volt"
+        >
+          Export CSV
+        </a>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
