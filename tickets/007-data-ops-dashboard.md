@@ -2,6 +2,7 @@
 
 **Priority:** Medium
 **Depends on:** Ticket 005 for auth gating if deployed publicly
+**Status:** Complete (/api/ops/health with refresh log incl. new error column, 67-feed health with healthy/quiet/dead inference, per-day ingest bars, value snapshot coverage, DB+cache storage, cache families grouped by season; /ops page cards+tables, footer link; smoke + build pass)
 
 ## Goal
 

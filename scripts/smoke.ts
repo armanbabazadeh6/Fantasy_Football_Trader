@@ -6,6 +6,7 @@ import { fetchTeamByeWeeks } from "@/lib/schedule";
 import { restOfSeasonGames } from "@/lib/schedule";
 import { blendProjection, computeProjectionSummary, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
+import { getOpsReport } from "@/lib/ops";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
@@ -345,10 +346,16 @@ async function unitTests(): Promise<void> {
       dedupeKeyFor("Mahomes is questionable in Week 1"),
     `key=${dedupeKeyFor("Mahomes questionable for Week 1")}`
   );
+  const archiveBefore = (
+    db.prepare("SELECT COUNT(*) AS n FROM news_items").get() as { n: number }
+  ).n;
   const ingested = await ingestNews();
+  const archiveAfter = (
+    db.prepare("SELECT COUNT(*) AS n FROM news_items").get() as { n: number }
+  ).n;
   check(
-    "news archive ingests live feed",
-    ingested.inserted > 0,
+    "news archive ingests live feed, dedupes on re-ingest",
+    ingested.inserted + ingested.skipped > 0 && archiveAfter - archiveBefore === ingested.inserted,
     `inserted=${ingested.inserted} skipped=${ingested.skipped}`
   );
   const injuries = await getArchivedNews({ category: "injury", limit: 50 });
@@ -461,6 +468,29 @@ async function integrationTests(): Promise<void> {
     "bye week map covers teams and valid weeks",
     Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
     `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
+  );
+
+  const ops = await getOpsReport();
+  check(
+    "ops report builds",
+    Array.isArray(ops.refreshHistory) && ops.feeds.length > 0 && ops.newsByDay.length > 0,
+    `refreshes=${ops.refreshHistory.length}, feeds=${ops.feeds.length}, archive=${ops.archive.total}`
+  );
+  check(
+    "ops storage numbers are real",
+    ops.storage.dbBytes > 0 && ops.storage.cacheFiles > 0 && ops.storage.cacheBytes > 0,
+    `db=${(ops.storage.dbBytes / 1024 / 1024).toFixed(1)}MB, cache=${ops.storage.cacheFiles} files`
+  );
+  check(
+    "ops cache families grouped",
+    ops.cacheFamilies.some((f) => f.family.includes("stats")) && ops.cacheFamilies.every((f) => f.files > 0),
+    ops.cacheFamilies.map((f) => f.family).join(", ")
+  );
+  const feedStatuses = new Set(ops.feeds.map((f) => f.status));
+  check(
+    "feed status inferred from archive windows",
+    feedStatuses.has("healthy") && [...feedStatuses].every((s) => ["healthy", "quiet", "dead"].includes(s)),
+    [...feedStatuses].join(", ")
   );
 }
 

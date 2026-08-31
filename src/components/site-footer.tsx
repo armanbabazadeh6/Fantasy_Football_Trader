@@ -18,6 +18,9 @@ export function SiteFooter() {
           <Link href="/news" className="transition-colors hover:text-volt">
             News
           </Link>
+          <Link href="/ops" className="transition-colors hover:text-volt">
+            Ops
+          </Link>
           <a
             href="https://github.com/armanbabazadeh6/Fantasy_Football_Trader"
             target="_blank"

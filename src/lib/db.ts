@@ -64,6 +64,10 @@ export function getDb(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_news_category ON news_items (category);
       CREATE INDEX IF NOT EXISTS idx_news_dedupe ON news_items (dedupe_key);
     `);
+    try {
+      db.exec("ALTER TABLE refresh_log ADD COLUMN error TEXT");
+    } catch {
+    }
     globalForDb.__fftDb = db;
   }
   return globalForDb.__fftDb;

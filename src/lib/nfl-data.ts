@@ -58,8 +58,9 @@ async function runBackgroundCycle(): Promise<void> {
       `[fft] background refresh ok — ${recorded} value snapshots, ${ingested.inserted} new news items`
     );
   } catch (err) {
-    db.prepare("UPDATE refresh_log SET finished_at = ?, ok = 0 WHERE id = ?").run(
+    db.prepare("UPDATE refresh_log SET finished_at = ?, ok = 0, error = ? WHERE id = ?").run(
       new Date().toISOString(),
+      err instanceof Error ? err.message : String(err),
       logId
     );
     console.error("[fft] background refresh failed:", err);
