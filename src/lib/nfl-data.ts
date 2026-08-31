@@ -67,6 +67,7 @@ async function executeRefreshCycle(logId: number): Promise<void> {
     db.prepare(
       "UPDATE refresh_log SET finished_at = ?, players = ?, news = ?, ok = 1 WHERE id = ?"
     ).run(new Date().toISOString(), recorded, ingested.inserted, logId);
+    invalidatePlayerSummaries();
     console.log(
       `[fft] background refresh ok — ${recorded} value snapshots, ${ingested.inserted} new news items`
     );
@@ -195,7 +196,32 @@ function toSummary(entry: ComputedPlayer): PlayerSummary {
   };
 }
 
+const SUMMARY_MEMO_TTL_MS = 5 * 60 * 1000;
+
+const globalForMemo = globalThis as unknown as {
+  __fftSummaryMemo?: { at: number; promise: Promise<PlayerSummary[]> };
+};
+
+export function invalidatePlayerSummaries(): void {
+  globalForMemo.__fftSummaryMemo = undefined;
+}
+
 export async function getPlayerSummaries(): Promise<PlayerSummary[]> {
+  const memo = globalForMemo.__fftSummaryMemo;
+  if (memo && Date.now() - memo.at < SUMMARY_MEMO_TTL_MS) {
+    return memo.promise;
+  }
+  const promise = computePlayerSummaries();
+  globalForMemo.__fftSummaryMemo = { at: Date.now(), promise };
+  promise.catch(() => {
+    if (globalForMemo.__fftSummaryMemo?.promise === promise) {
+      globalForMemo.__fftSummaryMemo = undefined;
+    }
+  });
+  return promise;
+}
+
+async function computePlayerSummaries(): Promise<PlayerSummary[]> {
   const [map, byes] = await Promise.all([computeAllPlayers(), fetchTeamByeWeeks()]);
   const scores = new Map<string, number>();
   for (const [id, entry] of map.entries()) {
