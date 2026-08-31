@@ -34,6 +34,20 @@ export interface WeekPoints {
   pts: number;
 }
 
+export interface GameLogRow {
+  week: number;
+  pts: number;
+  passYd?: number;
+  passTd?: number;
+  passInt?: number;
+  rushYd?: number;
+  rushTd?: number;
+  rec?: number;
+  recYd?: number;
+  recTd?: number;
+  targets?: number;
+}
+
 export interface PlayerSeasonAgg {
   season: number;
   games: number;

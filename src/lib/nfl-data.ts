@@ -1,12 +1,13 @@
 import { getCached } from "./cache";
 import { fetchNews, matchNewsForPlayer } from "./news";
-import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, statSeasons } from "./sleeper";
+import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, NFL_WEEKS, statSeasons } from "./sleeper";
 import { fetchTeamByeWeeks } from "./schedule";
-import { aggregateSeason } from "./fantasy";
+import { aggregateSeason, extractPPR } from "./fantasy";
 import { computePlayerValue } from "./value-engine";
 import { computeValueTrends, getPlayerValueHistory, recordDailyScores } from "./value-history";
 import { getDb } from "./db";
 import type {
+  GameLogRow,
   NFLPlayer,
   NewsItem,
   PlayerBundle,
@@ -268,13 +269,42 @@ export interface PlayerDetailData {
   news: NewsItem[];
   trendCount: number;
   valueHistory: { date: string; score: number }[];
+  gameLog: GameLogRow[];
+}
+
+function buildGameLog(
+  playerId: string,
+  season: number,
+  weekly: Record<number, Record<string, StatRow>>
+): GameLogRow[] {
+  const rows: GameLogRow[] = [];
+  for (let week = 1; week <= NFL_WEEKS; week++) {
+    const row = weekly[week]?.[playerId];
+    const pts = extractPPR(row);
+    if (pts === null) continue;
+    rows.push({
+      week,
+      pts,
+      passYd: row?.pass_yd,
+      passTd: row?.pass_td,
+      passInt: row?.pass_int,
+      rushYd: row?.rush_yd,
+      rushTd: row?.rush_td,
+      rec: row?.rec,
+      recYd: row?.rec_yd,
+      recTd: row?.rec_td,
+      targets: row?.targets,
+    });
+  }
+  return rows;
 }
 
 export async function getPlayerDetail(id: string): Promise<PlayerDetailData | null> {
-  const [computed, news, byes] = await Promise.all([
+  const [computed, news, byes, core] = await Promise.all([
     computeAllPlayers(),
     fetchNews(),
     fetchTeamByeWeeks(),
+    loadCoreData(),
   ]);
   const entry = computed.get(id);
   if (!entry) return null;
@@ -288,6 +318,7 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
     const trend = trends.get(id);
     if (trend !== undefined) summary.valueTrend = trend;
   }
+  const latestSeason = entry.aggs.find((agg) => agg.games > 0)?.season ?? statSeasons()[0];
   return {
     summary,
     player: entry.player,
@@ -295,5 +326,6 @@ export async function getPlayerDetail(id: string): Promise<PlayerDetailData | nu
     news: matchNewsForPlayer(news, entry.player, 12, 120),
     trendCount: entry.trendCount,
     valueHistory: getPlayerValueHistory(id),
+    gameLog: buildGameLog(id, latestSeason, core.weeklyBySeason.get(latestSeason) ?? {}),
   };
 }

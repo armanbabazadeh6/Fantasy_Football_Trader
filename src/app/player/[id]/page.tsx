@@ -33,10 +33,31 @@ export default async function PlayerPage({
   const detail = await getPlayerDetail(id);
   if (!detail) notFound();
 
-  const { player, seasons, news, summary, valueHistory, trendCount } = detail;
+  const { player, seasons, news, summary, valueHistory, trendCount, gameLog } = detail;
   const value = summary.value;
   const latest = seasons.find((s) => s.games > 0);
   const breakdown = value.breakdown;
+
+  const isQb = player.position === "QB";
+  const isSkill = ["RB", "WR", "TE"].includes(player.position);
+  const logColumns = isQb
+    ? [
+        { key: "passYd", label: "Pass Yds" },
+        { key: "passTd", label: "Pass TD" },
+        { key: "passInt", label: "INT" },
+        { key: "rushYd", label: "Rush Yds" },
+        { key: "rushTd", label: "Rush TD" },
+      ]
+    : isSkill
+      ? [
+          { key: "rec", label: "Rec" },
+          { key: "targets", label: "Tgt" },
+          { key: "recYd", label: "Rec Yds" },
+          { key: "recTd", label: "Rec TD" },
+          { key: "rushYd", label: "Rush Yds" },
+          { key: "rushTd", label: "Rush TD" },
+        ]
+      : [];
 
   const metaChips: { label: string; value: string }[] = [
     { label: "Team", value: teamDisplayName(player.team) },
@@ -183,6 +204,46 @@ export default async function PlayerPage({
               </p>
             </div>
             <WeeklyChart weeks={latest.weeks} ppg={latest.ppg} />
+            {gameLog.length > 0 && logColumns.length > 0 && (
+              <div className="mt-4 border-t border-white/5 pt-4">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Game log
+                </p>
+                <div className="max-h-64 overflow-y-auto rounded-lg border border-white/5">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-slate-900">
+                      <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500">
+                        <th className="px-3 py-2 font-semibold">Wk</th>
+                        <th className="px-3 py-2 text-right font-semibold">Pts</th>
+                        {logColumns.map((col) => (
+                          <th key={col.key} className="px-3 py-2 text-right font-semibold">
+                            {col.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gameLog.map((row) => (
+                        <tr
+                          key={row.week}
+                          className="border-t border-white/5 text-slate-300 odd:bg-white/[0.02]"
+                        >
+                          <td className="px-3 py-1.5 text-slate-500">{row.week}</td>
+                          <td className="px-3 py-1.5 text-right font-semibold text-slate-100">
+                            {formatPts(row.pts)}
+                          </td>
+                          {logColumns.map((col) => (
+                            <td key={col.key} className="px-3 py-1.5 text-right tabular-nums">
+                              {(row as unknown as Record<string, number | undefined>)[col.key] ?? "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
