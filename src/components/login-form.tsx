@@ -47,18 +47,18 @@ export function LoginForm({ next }: { next: string }) {
           This league is password protected.
         </p>
         <label className="mt-6 block">
-          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
             Password
           </span>
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2.5 focus-within:border-volt/50">
-            <Lock className="h-4 w-4 shrink-0 text-slate-500" />
+            <Lock className="h-4 w-4 shrink-0 text-slate-400" />
             <input
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoFocus
               required
-              className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+              className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
               placeholder="Enter the password"
             />
           </div>

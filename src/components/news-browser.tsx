@@ -44,13 +44,15 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2.5 focus-within:border-volt/50 sm:max-w-sm">
-          <Search className="h-4 w-4 shrink-0 text-slate-500" />
+        <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 focus-within:border-volt/50 sm:max-w-sm">
+          <Search className="h-4 w-4 shrink-0 text-slate-400" />
           <input
+            type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search headlines..."
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            aria-label="Search headlines"
+            className="w-full bg-transparent py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -60,7 +62,7 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
               type="button"
               onClick={() => setCategory(cat)}
               className={cn(
-                "rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+                "rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
                 category === cat
                   ? "border-volt/40 bg-volt/10 text-volt"
                   : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
@@ -75,7 +77,7 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
             type="button"
             onClick={() => setSource("ALL")}
             className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+              "rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
               source === "ALL"
                 ? "border-volt/40 bg-volt/10 text-volt"
                 : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
@@ -89,13 +91,13 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
               type="button"
               onClick={() => setSource(name)}
               className={cn(
-                "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                "rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
                 source === name
                   ? "border-volt/40 bg-volt/10 text-volt"
                   : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
               )}
             >
-              {name} <span className="text-slate-600">{count}</span>
+              {name} <span className="text-slate-400">{count}</span>
             </button>
           ))}
         </div>
@@ -104,7 +106,7 @@ export function NewsBrowser({ items }: { items: NewsItem[] }) {
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-white/5 bg-slate-900/60 px-6 py-16 text-center">
           <Newspaper className="mx-auto h-8 w-8 text-slate-700" />
-          <p className="mt-3 text-sm text-slate-500">No headlines match that filter.</p>
+          <p className="mt-3 text-sm text-slate-400">No headlines match that filter.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

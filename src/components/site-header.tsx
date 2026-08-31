@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function GithubMark({ className }: { className?: string }) {
@@ -23,6 +24,20 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     try {
@@ -65,13 +80,13 @@ export function SiteHeader() {
             <span className="font-display text-xl tracking-wide text-slate-100">
               FANTASY FOOTBALL TRADER
             </span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
               AI Trade Analyzer
             </span>
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="hidden items-center gap-1 sm:flex" aria-label="Primary">
           {NAV_LINKS.map((link) => {
             const active =
               pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -80,7 +95,7 @@ export function SiteHeader() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   active
                     ? "bg-volt/15 text-volt"
                     : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
@@ -92,7 +107,7 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="hidden rounded-full border border-volt/30 bg-volt/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-volt md:inline-block">
             12-Team PPR
           </span>
@@ -100,12 +115,68 @@ export function SiteHeader() {
             href="https://github.com/armanbabazadeh6/Fantasy_Football_Trader"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100"
+            className="hidden rounded-lg p-2.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 sm:block"
             aria-label="GitHub repository"
           >
             <GithubMark className="h-5 w-5" />
           </a>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-100 sm:hidden"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
+      </div>
+
+      <div
+        id="mobile-nav"
+        className={cn(
+          "overflow-hidden border-white/5 bg-slate-950/95 backdrop-blur-md transition-[max-height] duration-200 ease-out sm:hidden",
+          open ? "max-h-96 border-t" : "max-h-0"
+        )}
+      >
+        <nav className="mx-auto max-w-7xl px-4 py-3" aria-label="Mobile">
+          <ul className="flex flex-col gap-1">
+            {NAV_LINKS.map((link) => {
+              const active =
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "block rounded-lg px-3 py-3 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-volt/15 text-volt"
+                        : "text-slate-300 hover:bg-white/5 hover:text-slate-100"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-2 flex items-center justify-between border-t border-white/5 px-3 pt-3">
+            <span className="rounded-full border border-volt/30 bg-volt/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-volt">
+              12-Team PPR
+            </span>
+            <a
+              href="https://github.com/armanbabazadeh6/Fantasy_Football_Trader"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100"
+              aria-label="GitHub repository"
+            >
+              <GithubMark className="h-5 w-5" />
+            </a>
+          </div>
+        </nav>
       </div>
     </header>
   );

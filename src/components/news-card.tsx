@@ -34,7 +34,7 @@ export function NewsCard({ item, className }: NewsCardProps) {
         >
           {item.source}
         </span>
-        <span className="shrink-0 text-[11px] text-slate-500">
+        <span className="shrink-0 text-[11px] text-slate-400">
           {relativeTime(item.publishedAt)}
         </span>
       </div>
@@ -42,7 +42,7 @@ export function NewsCard({ item, className }: NewsCardProps) {
         {item.title}
       </p>
       {item.summary && (
-        <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{item.summary}</p>
+        <p className="line-clamp-2 text-xs leading-relaxed text-slate-400">{item.summary}</p>
       )}
       <span className="mt-auto inline-flex items-center gap-1 pt-1 text-[11px] font-medium text-volt/80">
         Read more

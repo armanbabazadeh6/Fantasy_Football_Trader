@@ -143,7 +143,7 @@ export default async function HomePage() {
                   <p className="font-display text-2xl leading-none text-slate-100">
                     <CountUp value={stat.value} />
                   </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">{stat.label}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">{stat.label}</p>
                 </div>
               </div>
             ))}
@@ -162,7 +162,7 @@ export default async function HomePage() {
             action={
               <Link
                 href="/players"
-                className="inline-flex items-center gap-1 text-sm font-medium text-volt hover:text-volt/80"
+                className="inline-flex items-center gap-1 py-1.5 text-sm font-medium text-volt hover:text-volt/80"
               >
                 Full value board
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -188,7 +188,7 @@ export default async function HomePage() {
             action={
               <Link
                 href="/news"
-                className="inline-flex items-center gap-1 text-sm font-medium text-volt hover:text-volt/80"
+                className="inline-flex items-center gap-1 py-1.5 text-sm font-medium text-volt hover:text-volt/80"
               >
                 All news
                 <ArrowRight className="h-3.5 w-3.5" />

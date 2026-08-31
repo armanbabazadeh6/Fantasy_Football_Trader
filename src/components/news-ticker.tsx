@@ -19,16 +19,16 @@ export function NewsTicker({ items }: { items: NewsItem[] }) {
                 href={item.link || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex shrink-0 items-center gap-2.5 text-xs text-slate-400 transition-colors hover:text-slate-100"
+                className="flex shrink-0 items-center gap-2.5 py-2 text-xs text-slate-300 transition-colors hover:text-slate-100"
               >
-                <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   {item.source}
                 </span>
                 <span className="whitespace-nowrap">{item.title}</span>
-                <span className="text-[10px] text-slate-600">
+                <span className="text-[10px] text-slate-400">
                   {relativeTime(item.publishedAt)}
                 </span>
-                <span className="text-slate-800">•</span>
+                <span className="text-slate-700" aria-hidden="true">•</span>
               </a>
             ))}
           </div>

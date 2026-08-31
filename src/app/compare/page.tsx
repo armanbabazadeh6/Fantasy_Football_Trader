@@ -138,7 +138,7 @@ export default function ComparePage() {
   const render = useCallback(
     (side: "a" | "b") => (
       <div className="flex min-h-[340px] flex-1 flex-col gap-3 rounded-xl border border-white/5 bg-slate-900/60 p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           {side === "a" ? "Player A" : "Player B"}
         </p>
         <PlayerSearch
@@ -168,19 +168,19 @@ export default function ComparePage() {
                 </Link>
                 <div className="flex items-center gap-2">
                   <PositionBadge position={p.position} />
-                  <span className="text-xs text-slate-500">{teamDisplayName(p.team)}</span>
+                  <span className="text-xs text-slate-400">{teamDisplayName(p.team)}</span>
                 </div>
                 <div>
                   <p className={cn("font-display text-6xl leading-none", scoreColor(p.value.score))}>
                     {p.value.score ?? "—"}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">{p.value.tier}</p>
+                  <p className="mt-1 text-xs text-slate-400">{p.value.tier}</p>
                 </div>
               </div>
             );
           })()
         ) : (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 px-4 py-10 text-center text-xs text-slate-600">
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 px-4 py-10 text-center text-xs text-slate-400">
             Search a player to fill this side
           </div>
         )}
@@ -231,7 +231,7 @@ export default function ComparePage() {
                 <Scale className="h-5 w-5 text-volt" />
                 WEEKLY SCORING
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 {bundles[0].seasons[0]?.season} season · volt = {bundles[0].name}
               </p>
             </div>
@@ -252,7 +252,7 @@ export default function ComparePage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-slate-500">
+              <p className="py-8 text-center text-sm text-slate-400">
                 No weekly data for these players.
               </p>
             )}
@@ -261,7 +261,7 @@ export default function ComparePage() {
           <div className="overflow-hidden rounded-xl border border-white/5 bg-slate-900/60">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-left text-[11px] uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-white/5 text-left text-[11px] uppercase tracking-wider text-slate-400">
                   <th className="py-3 pl-5 pr-2 font-semibold">Metric</th>
                   <th className="px-2 py-3 text-right font-semibold">{bundles[0].name}</th>
                   <th className="px-2 py-3 text-right font-semibold">{bundles[1].name}</th>
@@ -270,7 +270,7 @@ export default function ComparePage() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.label} className="border-b border-white/5 last:border-0 odd:bg-white/[0.02]">
-                    <td className="py-2.5 pl-5 pr-2 text-slate-500">{row.label}</td>
+                    <td className="py-2.5 pl-5 pr-2 text-slate-400">{row.label}</td>
                     <td
                       className={cn(
                         "px-2 py-2.5 text-right font-medium tabular-nums",
@@ -293,7 +293,7 @@ export default function ComparePage() {
             </table>
           </div>
 
-          <p className="text-center text-xs text-slate-600">
+          <p className="text-center text-xs text-slate-400">
             Green value wins each category. <ArrowLeftRight className="inline h-3 w-3" /> Try
             both sides of your next trade here before running the full analysis.
           </p>

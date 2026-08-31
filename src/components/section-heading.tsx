@@ -24,7 +24,7 @@ export function SectionHeading({
           {title}
         </h2>
         <div className="heading-underline mt-1.5" />
-        {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-sm text-slate-400">{subtitle}</p>}
       </div>
       {action}
     </div>

@@ -191,7 +191,7 @@ export default function AnalyzerPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-300">
               Quick add from your Sleeper roster — {rosterContext.teamName}
             </p>
-            <Link href="/league" className="text-xs text-slate-500 hover:text-sky-300">
+            <Link href="/league" className="text-xs text-slate-400 hover:text-sky-300">
               Change team
             </Link>
           </div>
@@ -211,7 +211,7 @@ export default function AnalyzerPage() {
                 >
                   <PositionBadge position={player.position} />
                   {player.name}
-                  <span className="text-slate-500">{player.value.score ?? "—"}</span>
+                  <span className="text-slate-400">{player.value.score ?? "—"}</span>
                 </button>
               );
             })}
@@ -252,7 +252,7 @@ export default function AnalyzerPage() {
           <div>
             <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider">
               <span className="text-rose-300">Send {giveValue || "—"}</span>
-              <span className="text-slate-500">
+              <span className="text-slate-400">
                 {give.length + get.length > 0 ? `diff ${getValue - giveValue >= 0 ? "+" : ""}${getValue - giveValue}` : "value balance"}
               </span>
               <span className="text-emerald-300">Receive {getValue || "—"}</span>
@@ -272,7 +272,7 @@ export default function AnalyzerPage() {
               )}
             </div>
             {liveVerdict && (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-400">
                 Live engine read:{" "}
                 <span className={cn("font-semibold", verdictStyle(liveVerdict).text)}>
                   {verdictStyle(liveVerdict).label}
@@ -429,7 +429,7 @@ export default function AnalyzerPage() {
                 </div>
                 {result.engine.needs.length > 0 && (
                   <div className="mt-4 border-t border-white/5 pt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       Your roster needs
                     </p>
                     <ul className="mt-2 space-y-1">
@@ -454,7 +454,7 @@ export default function AnalyzerPage() {
                       </p>
                       <p className="mt-1 font-display text-3xl text-slate-100">
                         {result.give.reduce((sum, b) => sum + (b.projection?.rosPoints ?? 0), 0).toFixed(0)}
-                        <span className="ml-1 text-sm text-slate-500">pts</span>
+                        <span className="ml-1 text-sm text-slate-400">pts</span>
                       </p>
                     </div>
                     <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
@@ -463,7 +463,7 @@ export default function AnalyzerPage() {
                       </p>
                       <p className="mt-1 font-display text-3xl text-slate-100">
                         {result.get.reduce((sum, b) => sum + (b.projection?.rosPoints ?? 0), 0).toFixed(0)}
-                        <span className="ml-1 text-sm text-slate-500">pts</span>
+                        <span className="ml-1 text-sm text-slate-400">pts</span>
                       </p>
                     </div>
                   </div>
@@ -535,11 +535,11 @@ export default function AnalyzerPage() {
                 <span className="text-sm text-slate-300">
                   {entry.give.map((p) => p.name).join(", ")}
                 </span>
-                <ArrowLeftRight className="h-3.5 w-3.5 text-slate-600" />
+                <ArrowLeftRight className="h-3.5 w-3.5 text-slate-400" />
                 <span className="text-sm text-slate-300">
                   {entry.get.map((p) => p.name).join(", ")}
                 </span>
-                <span className="ml-auto text-xs text-slate-600">{relativeTime(entry.ts)}</span>
+                <span className="ml-auto text-xs text-slate-400">{relativeTime(entry.ts)}</span>
               </button>
             ))}
           </div>
@@ -579,7 +579,7 @@ function TradeSidePanel({
           <button
             type="button"
             onClick={onClear}
-            className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+            className="text-xs text-slate-400 transition-colors hover:text-slate-300"
           >
             Clear
           </button>
@@ -588,7 +588,7 @@ function TradeSidePanel({
       <PlayerSearch onAdd={onAdd} disabledIds={disabledIds} />
       <div className="mt-3 space-y-2">
         {players.length === 0 && (
-          <p className="rounded-lg border border-dashed border-white/10 px-3 py-6 text-center text-xs text-slate-600">
+          <p className="rounded-lg border border-dashed border-white/10 px-3 py-6 text-center text-xs text-slate-400">
             Search and add players to this side of the trade
           </p>
         )}
@@ -609,7 +609,7 @@ function TradeSidePanel({
               <p className="truncate text-sm font-medium text-slate-100">{player.name}</p>
               <div className="mt-0.5 flex items-center gap-1.5">
                 <PositionBadge position={player.position} />
-                <span className="truncate text-[11px] text-slate-500">
+                <span className="truncate text-[11px] text-slate-400">
                   {teamDisplayName(player.team)}
                 </span>
               </div>
@@ -620,7 +620,7 @@ function TradeSidePanel({
             <button
               type="button"
               onClick={() => onRemove(player.id)}
-              className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+              className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
               aria-label={`Remove ${player.name}`}
             >
               <span className="text-sm font-bold">×</span>
@@ -630,7 +630,7 @@ function TradeSidePanel({
       </div>
       {players.length > 0 && (
         <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Side value
           </span>
           <span className={cn("font-display text-2xl", accentText)}>{total}</span>
@@ -648,7 +648,7 @@ function VerdictBanner({ result, verdict }: { result: AnalyzeResponse; verdict: 
       <TouchdownBurst active={celebrate} />
       <div key={result.generatedAt} className="animate-scale-in relative flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
             Verdict {result.ai ? "— AI analyst" : "— rule engine"}
           </p>
           <p className={cn("mt-1 font-display text-5xl leading-none tracking-wide sm:text-6xl", style.text)}>
@@ -656,10 +656,10 @@ function VerdictBanner({ result, verdict }: { result: AnalyzeResponse; verdict: 
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-400">
             {result.ai ? result.ai.headline : `${result.engine.diff >= 0 ? "+" : ""}${result.engine.diff} value gap`}
           </p>
-          <p className="mt-1 text-[11px] text-slate-600">
+          <p className="mt-1 text-[11px] text-slate-400">
             {relativeTime(result.generatedAt)}
           </p>
         </div>
@@ -710,13 +710,13 @@ function SideLedger({
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</span>
         <span className="font-display text-xl text-slate-200">{value}</span>
       </div>
       <div className="flex h-2 overflow-hidden rounded-full bg-slate-800">
         <div className={cn("h-full rounded-full", barColor)} style={{ width: `${Math.min(value, 100)}%` }} />
       </div>
-      <p className="mt-1 text-[11px] text-slate-600">
+      <p className="mt-1 text-[11px] text-slate-400">
         {players.map((p) => `${p.name} (${p.value.score ?? "—"})`).join(" · ")}
       </p>
     </div>
@@ -755,7 +755,7 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <PositionBadge position={bundle.position} />
-            <span className="text-xs text-slate-500">{teamDisplayName(bundle.team)}</span>
+            <span className="text-xs text-slate-400">{teamDisplayName(bundle.team)}</span>
             {bundle.injuryStatus && (
               <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
                 {bundle.injuryStatus}
@@ -777,7 +777,7 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
           <p className="font-display text-3xl leading-none text-slate-100">
             {bundle.value.score ?? "—"}
           </p>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">{bundle.value.tier}</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-400">{bundle.value.tier}</p>
         </div>
       </div>
 
@@ -798,7 +798,7 @@ function PlayerResultCard({ bundle, side }: { bundle: PlayerBundle; side: "send"
 
       {bundle.news.length > 0 && (
         <div className="mt-3 border-t border-white/5 pt-3">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Recent news
           </p>
           <ul className="space-y-1">
@@ -839,7 +839,7 @@ function StatTile({
       )}
     >
       <p className="text-sm font-semibold text-slate-200">{value}</p>
-      <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-slate-400">{label}</p>
     </div>
   );
 }

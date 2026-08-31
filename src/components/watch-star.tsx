@@ -40,7 +40,7 @@ export function WatchStar({ playerId, playerName, className }: WatchStarProps) {
       aria-label={watched ? `Remove ${playerName} from watchlist` : `Add ${playerName} to watchlist`}
       className={cn(
         "rounded-md p-1 transition-colors",
-        watched ? "text-amber-300" : "text-slate-600 hover:text-slate-300",
+        watched ? "text-amber-300" : "text-slate-400 hover:text-slate-300",
         className
       )}
     >

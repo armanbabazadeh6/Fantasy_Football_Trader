@@ -52,7 +52,7 @@ function StatCard({
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
         {label}
       </p>
       <p
@@ -66,7 +66,7 @@ function StatCard({
       >
         {value}
       </p>
-      {detail ? <p className="mt-1 text-xs text-slate-500">{detail}</p> : null}
+      {detail ? <p className="mt-1 text-xs text-slate-400">{detail}</p> : null}
     </div>
   );
 }
@@ -173,13 +173,13 @@ export default async function OpsPage() {
 
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <section className="lg:col-span-2">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
             Refresh history
           </h2>
           <div className="overflow-x-auto rounded-2xl border border-white/10">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-wider text-slate-400">
                   <th className="px-4 py-3">Started</th>
                   <th className="px-4 py-3">Duration</th>
                   <th className="px-4 py-3">Players</th>
@@ -190,7 +190,7 @@ export default async function OpsPage() {
               <tbody>
                 {report.refreshHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
                       No refresh cycles logged yet.
                     </td>
                   </tr>
@@ -230,13 +230,13 @@ export default async function OpsPage() {
             </table>
           </div>
 
-          <h2 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-slate-400">
             Cache ages
           </h2>
           <div className="overflow-x-auto rounded-2xl border border-white/10">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-wider text-slate-400">
                   <th className="px-4 py-3">Family</th>
                   <th className="px-4 py-3">Files</th>
                   <th className="px-4 py-3">Size</th>
@@ -258,7 +258,7 @@ export default async function OpsPage() {
                       <td className="px-4 py-3 text-slate-400">
                         {formatBytes(fam.bytes)}
                       </td>
-                      <td className="px-4 py-3 text-slate-500">
+                      <td className="px-4 py-3 text-slate-400">
                         {fam.oldestMs !== null ? ageOfMs(fam.oldestMs) : "—"}
                       </td>
                       <td
@@ -278,17 +278,17 @@ export default async function OpsPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
             Ingest by day
           </h2>
           <div className="rounded-2xl border border-white/10 p-4">
             {report.newsByDay.length === 0 ? (
-              <p className="text-sm text-slate-500">Archive is empty.</p>
+              <p className="text-sm text-slate-400">Archive is empty.</p>
             ) : (
               <ul className="space-y-2">
                 {report.newsByDay.map((d) => (
                   <li key={d.day} className="flex items-center gap-3 text-xs">
-                    <span className="w-20 shrink-0 font-mono text-slate-500">{d.day}</span>
+                    <span className="w-20 shrink-0 font-mono text-slate-400">{d.day}</span>
                     <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
                       <span
                         className="block h-full rounded-full bg-volt/70"
@@ -304,7 +304,7 @@ export default async function OpsPage() {
             )}
           </div>
 
-          <h2 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-slate-400">
             Feed health
           </h2>
           <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -312,7 +312,7 @@ export default async function OpsPage() {
               <tbody>
                 {report.feeds.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-6 text-center text-slate-500">
+                    <td className="px-4 py-6 text-center text-slate-400">
                       No sources archived yet.
                     </td>
                   </tr>
@@ -323,7 +323,7 @@ export default async function OpsPage() {
                         <p className="max-w-[180px] truncate text-xs text-slate-300">
                           {feed.source}
                         </p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-slate-400">
                           24h {feed.last24h} · 7d {feed.last7d} · total {feed.total}
                         </p>
                       </td>

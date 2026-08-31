@@ -110,7 +110,7 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
                   </Link>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     <PositionBadge position={player.position} />
-                    <span className="truncate text-xs text-slate-500">
+                    <span className="truncate text-xs text-slate-400">
                       {teamDisplayName(player.team)}
                     </span>
                     {injured && (
@@ -145,7 +145,7 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
                       >
                         <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" />
                         <span className="truncate">{item.title}</span>
-                        <span className="ml-auto shrink-0 text-slate-600">
+                        <span className="ml-auto shrink-0 text-slate-400">
                           {relativeTime(item.publishedAt)}
                         </span>
                       </a>

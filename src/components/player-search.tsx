@@ -90,9 +90,10 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
 
   return (
     <div ref={rootRef} className="relative">
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2.5 transition-colors focus-within:border-volt/50">
-        <Search className="h-4 w-4 shrink-0 text-slate-500" />
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 transition-colors focus-within:border-volt/50">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" />
         <input
+          type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={onKeyDown}
@@ -100,7 +101,8 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
             if (results.length > 0) setOpen(true);
           }}
           placeholder="Search a player..."
-          className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+          aria-label="Search a player"
+          className="w-full bg-transparent py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
         />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-volt" />}
       </div>
@@ -108,7 +110,7 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
       {open && (loading || results.length > 0) && (
         <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/60">
           {loading && results.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-500">Searching players...</p>
+            <p className="px-4 py-3 text-sm text-slate-400">Searching players...</p>
           )}
           {results.map((player, index) => {
             const disabled = disabledIds.includes(player.id);
@@ -141,7 +143,7 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
                       </span>
                     )}
                   </p>
-                  <p className="truncate text-xs text-slate-500">
+                  <p className="truncate text-xs text-slate-400">
                     <PositionBadge position={player.position} className="mr-1" />
                     {teamDisplayName(player.team)}
                   </p>
@@ -150,7 +152,7 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
                   <p className="font-display text-lg leading-none text-slate-100">
                     {player.value.score ?? "—"}
                   </p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-400">
                     {player.value.ppg !== null ? `${formatPts(player.value.ppg)} ppg` : "no data"}
                   </p>
                 </div>
@@ -158,7 +160,7 @@ export function PlayerSearch({ onAdd, disabledIds }: PlayerSearchProps) {
             );
           })}
           {!loading && results.length === 0 && query.trim().length >= 2 && (
-            <p className="px-4 py-3 text-sm text-slate-500">No players found.</p>
+            <p className="px-4 py-3 text-sm text-slate-400">No players found.</p>
           )}
         </div>
       )}

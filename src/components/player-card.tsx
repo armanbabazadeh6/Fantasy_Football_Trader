@@ -23,7 +23,7 @@ export function PlayerCard({ player, rank, className }: PlayerCardProps) {
     >
       <div className="flex items-center gap-3">
         {typeof rank === "number" && (
-          <span className="w-5 shrink-0 text-center font-display text-lg text-slate-600 group-hover:text-volt">
+          <span className="w-5 shrink-0 text-center font-display text-lg text-slate-400 group-hover:text-volt">
             {rank}
           </span>
         )}
@@ -39,7 +39,7 @@ export function PlayerCard({ player, rank, className }: PlayerCardProps) {
           </p>
           <div className="mt-1 flex items-center gap-1.5">
             <PositionBadge position={player.position} />
-            <span className="truncate text-xs text-slate-500">
+            <span className="truncate text-xs text-slate-400">
               {teamDisplayName(player.team)}
             </span>
           </div>

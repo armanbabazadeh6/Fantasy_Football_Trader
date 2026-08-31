@@ -156,7 +156,7 @@ export function PlayersTable({
             seasons of PPR data, consistency, age curve, and injuries.
           </p>
         </div>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-400">
           Showing{" "}
           <span className="font-semibold text-slate-300">{players.length}</span>{" "}
           of <span className="font-semibold text-slate-300">{total.toLocaleString()}</span>{" "}
@@ -165,13 +165,15 @@ export function PlayersTable({
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2.5 focus-within:border-volt/50 sm:max-w-sm">
-          <Search className="h-4 w-4 shrink-0 text-slate-500" />
+        <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 focus-within:border-volt/50 sm:max-w-sm">
+          <Search className="h-4 w-4 shrink-0 text-slate-400" />
           <input
+            type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search players..."
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            aria-label="Search players"
+            className="w-full bg-transparent py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -181,7 +183,7 @@ export function PlayersTable({
               type="button"
               onClick={() => setPosition(pos)}
               className={cn(
-                "rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+                "rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
                 position === pos
                   ? "border-volt/40 bg-volt/10 text-volt"
                   : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
@@ -202,7 +204,7 @@ export function PlayersTable({
       <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
-            <tr className="border-b border-white/5 text-left text-[11px] uppercase tracking-wider text-slate-500">
+            <tr className="border-b border-white/5 text-left text-[11px] uppercase tracking-wider text-slate-400">
               <th className="py-3 pl-4 pr-2 font-semibold">#</th>
               <th className="px-2 py-3 font-semibold">
                 <SortButton label="Player" active={sortKey === "name"} dir={sortDir} onClick={() => toggleSort("name")} />
@@ -237,7 +239,7 @@ export function PlayersTable({
             ))}
             {loading && (
               <tr>
-                <td colSpan={12} className="px-4 py-6 text-center text-sm text-slate-500">
+                <td colSpan={12} className="px-4 py-6 text-center text-sm text-slate-400">
                   Loading players...
                 </td>
               </tr>
@@ -254,7 +256,7 @@ export function PlayersTable({
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-slate-400">
           {hasMore
             ? `${(total - players.length).toLocaleString()} more on the board`
             : "End of board"}
@@ -294,7 +296,7 @@ async function listPlayerSummariesApi(
 function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
   return (
     <tr className="value-row-hover border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
-      <td className="py-2.5 pl-4 pr-2 text-slate-600">{rank}</td>
+      <td className="py-2.5 pl-4 pr-2 text-slate-400">{rank}</td>
       <td className="px-2 py-2.5">
         <Link href={`/player/${player.id}`} className="flex items-center gap-2.5">
           <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
@@ -332,7 +334,7 @@ function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
           className={cn(
             player.projection?.source === "espn"
               ? "text-slate-200"
-              : "text-slate-500"
+              : "text-slate-400"
           )}
         >
           {formatPts(player.projection?.ppg)}
@@ -379,7 +381,7 @@ function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
           </div>
         </div>
       </td>
-      <td className="py-2.5 pl-2 pr-4 text-xs text-slate-500">
+      <td className="py-2.5 pl-2 pr-4 text-xs text-slate-400">
         {player.value.tier}
       </td>
     </tr>
@@ -402,7 +404,7 @@ function SortButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 uppercase tracking-wider transition-colors",
+        "inline-flex items-center gap-1 py-2 uppercase tracking-wider transition-colors",
         active ? "text-volt" : "hover:text-slate-300"
       )}
     >

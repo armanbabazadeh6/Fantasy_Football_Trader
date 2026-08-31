@@ -36,7 +36,7 @@ export default async function PlayerPage({
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <Link
         href="/players"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-volt"
+        className="mb-6 inline-flex items-center gap-1.5 py-1.5 text-sm text-slate-400 transition-colors hover:text-volt"
       >
         <ArrowLeft className="h-4 w-4" />
         All players
@@ -138,14 +138,14 @@ async function PlayerContent({ id }: { id: string }) {
               size="lg"
             />
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="font-display text-4xl tracking-wide text-slate-100 sm:text-5xl">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h1 className="font-display text-3xl tracking-wide text-slate-100 min-[420px]:text-4xl sm:text-5xl">
                   {player.name}
                 </h1>
-                <WatchStar playerId={player.id} playerName={player.name} />
+                <WatchStar playerId={player.id} playerName={player.name} className="shrink-0" />
                 <Link
                   href={`/compare?a=${player.id}`}
-                  className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-volt/40 hover:text-volt"
+                  className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-xs font-semibold text-slate-300 transition-colors hover:border-volt/40 hover:text-volt"
                 >
                   Compare
                 </Link>
@@ -165,7 +165,7 @@ async function PlayerContent({ id }: { id: string }) {
                     key={chip.label}
                     className="rounded-lg border border-white/5 bg-slate-950/60 px-3 py-1.5"
                   >
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400">
                       {chip.label}
                     </p>
                     <p className={cn("text-sm font-medium", chip.label === "Injury" ? "text-rose-300" : "text-slate-200")}>
@@ -178,14 +178,14 @@ async function PlayerContent({ id }: { id: string }) {
           </div>
 
           <div className="min-w-[220px] flex-1 sm:max-w-xs">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Trade value
             </p>
             <div className="flex items-end gap-2">
               <span className={cn("font-display text-6xl leading-none", scoreColor(value.score))}>
                 {value.score ?? "—"}
               </span>
-              <span className="pb-1 text-sm text-slate-500">/ 100</span>
+              <span className="pb-1 text-sm text-slate-400">/ 100</span>
             </div>
             <p className="mt-1 text-sm font-medium text-slate-300">{value.tier}</p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
@@ -209,14 +209,14 @@ async function PlayerContent({ id }: { id: string }) {
             )}
             {valueHistory.length > 1 && (
               <div className="mt-3 border-t border-white/5 pt-3">
-                <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">
+                <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-400">
                   Value history ({valueHistory.length} snapshots)
                 </p>
                 <TrendSparkline data={valueHistory} />
               </div>
             )}
             {value.ppg !== null && (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-400">
                 {formatPts(value.ppg)} weighted pts/game · {value.games} games last season
               </p>
             )}
@@ -242,20 +242,20 @@ async function PlayerContent({ id }: { id: string }) {
               <h2 className="font-display text-2xl tracking-wide text-slate-100">
                 {latest.season} WEEKLY OUTPUT
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 Dashed line = season average ({formatPts(latest.ppg)} pts)
               </p>
             </div>
             <WeeklyChart weeks={latest.weeks} ppg={latest.ppg} />
             {gameLog.length > 0 && logColumns.length > 0 && (
               <div className="mt-4 border-t border-white/5 pt-4">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   Game log
                 </p>
                 <div className="max-h-64 overflow-y-auto rounded-lg border border-white/5">
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-slate-900">
-                      <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500">
+                      <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400">
                         <th className="px-3 py-2 font-semibold">Wk</th>
                         <th className="px-3 py-2 text-right font-semibold">Pts</th>
                         {logColumns.map((col) => (
@@ -271,7 +271,7 @@ async function PlayerContent({ id }: { id: string }) {
                           key={row.week}
                           className="border-t border-white/5 text-slate-300 odd:bg-white/[0.02]"
                         >
-                          <td className="px-3 py-1.5 text-slate-500">{row.week}</td>
+                          <td className="px-3 py-1.5 text-slate-400">{row.week}</td>
                           <td className="px-3 py-1.5 text-right font-semibold text-slate-100">
                             {formatPts(row.pts)}
                           </td>
@@ -334,7 +334,7 @@ async function PlayerContent({ id }: { id: string }) {
                       className="flex items-center justify-between rounded-lg bg-slate-950/60 px-3 py-2.5"
                     >
                       <span className="text-sm font-semibold text-slate-300">{season.season}</span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-400">
                         {season.games} gms · {formatPts(season.total)} pts ·{" "}
                         {formatPts(season.ppg)} ppg
                         {season.posRank ? ` · #${season.posRank}` : ""}
@@ -349,7 +349,7 @@ async function PlayerContent({ id }: { id: string }) {
       ) : (
         <div className="mt-6 rounded-xl border border-white/5 bg-slate-900/60 p-8 text-center">
           <h2 className="font-display text-2xl tracking-wide text-slate-100">NO NFL DATA YET</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
             {player.rookie
               ? "Rookie season ahead — value comes from draft capital and camp news. Check the news feed below."
               : "No recorded fantasy production over the last two seasons. Value is unknown until they see the field."}
@@ -400,7 +400,7 @@ function BreakdownTile({
       >
         {mult ? `${value}x` : value > 0 ? `+${value}` : value}
       </p>
-      <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">{label}</p>
     </div>
   );
 }
@@ -408,7 +408,7 @@ function BreakdownTile({
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0 last:pb-0">
-      <dt className="text-xs text-slate-500">{label}</dt>
+      <dt className="text-xs text-slate-400">{label}</dt>
       <dd className="text-sm font-semibold text-slate-200">{value}</dd>
     </div>
   );

@@ -12,7 +12,7 @@ export function ValueMeter({ value, showLabel = true, className }: ValueMeterPro
 
   if (score === null) {
     return (
-      <div className={cn("text-xs text-slate-500", className)}>
+      <div className={cn("text-xs text-slate-400", className)}>
         {showLabel ? "No recent data" : "—"}
       </div>
     );
@@ -22,7 +22,7 @@ export function ValueMeter({ value, showLabel = true, className }: ValueMeterPro
     <div className={cn("w-full", className)}>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         {showLabel && (
-          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
             {value.tier}
           </span>
         )}
@@ -37,7 +37,7 @@ export function ValueMeter({ value, showLabel = true, className }: ValueMeterPro
         />
       </div>
       {value.ppg !== null && (
-        <p className="mt-1 text-[11px] text-slate-500">
+        <p className="mt-1 text-[11px] text-slate-400">
           {formatPts(value.ppg)} pts/game
           {value.games > 0 ? ` · ${value.games} games` : ""}
         </p>
