@@ -123,6 +123,11 @@ export interface ArchiveQuery {
   limit?: number;
 }
 
+export function countArchivedNews(): number {
+  const db = getDb();
+  return (db.prepare("SELECT COUNT(*) AS n FROM news_items").get() as { n: number }).n;
+}
+
 export async function getArchivedNews(query: ArchiveQuery = {}): Promise<ArchivedNewsItem[]> {
   const db = getDb();
   const count = (db.prepare("SELECT COUNT(*) AS n FROM news_items").get() as { n: number }).n;
