@@ -105,7 +105,6 @@ export function startBackgroundRefresh(): void {
 }
 
 export async function loadCoreData(): Promise<CoreData> {
-  startBackgroundRefresh();
   corePromise ??= (async () => {
     const [players, trending] = await Promise.all([
       fetchAllPlayers(),
