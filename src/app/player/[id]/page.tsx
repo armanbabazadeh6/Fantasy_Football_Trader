@@ -7,9 +7,8 @@ import { NewsCard } from "@/components/news-card";
 import { NewBadge } from "@/components/new-badge";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
-import { TrendSparkline } from "@/components/trend-sparkline";
+import { LazyTrendSparkline, LazyWeeklyChart } from "@/components/charts-lazy";
 import { WatchStar } from "@/components/watch-star";
-import { WeeklyChart } from "@/components/weekly-chart";
 import { getPlayerDetail } from "@/lib/nfl-data";
 import { cn, formatPts, scoreBarColor, scoreColor } from "@/lib/utils";
 import { teamDisplayName } from "@/lib/teams";
@@ -212,7 +211,7 @@ async function PlayerContent({ id }: { id: string }) {
                 <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-400">
                   Value history ({valueHistory.length} snapshots)
                 </p>
-                <TrendSparkline data={valueHistory} />
+                <LazyTrendSparkline data={valueHistory} />
               </div>
             )}
             {value.ppg !== null && (
@@ -246,7 +245,7 @@ async function PlayerContent({ id }: { id: string }) {
                 Dashed line = season average ({formatPts(latest.ppg)} pts)
               </p>
             </div>
-            <WeeklyChart weeks={latest.weeks} ppg={latest.ppg} />
+            <LazyWeeklyChart weeks={latest.weeks} ppg={latest.ppg} />
             {gameLog.length > 0 && logColumns.length > 0 && (
               <div className="mt-4 border-t border-white/5 pt-4">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">

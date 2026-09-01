@@ -2,16 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { ArrowLeftRight, Loader2, Scale } from "lucide-react";
+import { LazyCompareChart } from "@/components/charts-lazy";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerSearch } from "@/components/player-search";
 import { PositionBadge } from "@/components/position-badge";
@@ -236,21 +228,7 @@ export default function ComparePage() {
               </p>
             </div>
             {chartData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                    <CartesianGrid stroke="#1e293b" strokeDasharray="2 4" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={{ stroke: "#1e293b" }} tickLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", fontSize: 12 }}
-                      labelStyle={{ color: "#94a3b8" }}
-                    />
-                    <Line type="monotone" dataKey={bundles[0].name} stroke="#a3e635" strokeWidth={2} dot={{ r: 2, fill: "#a3e635" }} connectNulls />
-                    <Line type="monotone" dataKey={bundles[1].name} stroke="#fb7185" strokeWidth={2} dot={{ r: 2, fill: "#fb7185" }} connectNulls />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <LazyCompareChart data={chartData} aName={bundles[0].name} bName={bundles[1].name} />
             ) : (
               <p className="py-8 text-center text-sm text-slate-400">
                 No weekly data for these players.

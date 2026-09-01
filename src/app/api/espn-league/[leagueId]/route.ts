@@ -10,6 +10,12 @@ import type { LeagueResponse } from "@/types";
 
 export const dynamic = "force-dynamic";
 
+const LEAGUE_CACHE_TTL_MS = 60 * 1000;
+
+const globalForLeagueCache = globalThis as unknown as {
+  __fftLeagueCache?: Map<string, { at: number; payload: LeagueResponse }>;
+};
+
 const PRIVATE_LEAGUE_MESSAGE =
   "This ESPN league is private. Add your espn_s2 and SWID cookies to load it.";
 
@@ -24,6 +30,17 @@ export async function GET(
         { ok: false, error: "Invalid league ID." },
         { status: 400 }
       );
+    }
+
+    const cache =
+      globalForLeagueCache.__fftLeagueCache ??
+      (globalForLeagueCache.__fftLeagueCache = new Map<
+        string,
+        { at: number; payload: LeagueResponse }
+      >());
+    const cached = cache.get(leagueId);
+    if (cached && Date.now() - cached.at < LEAGUE_CACHE_TTL_MS) {
+      return NextResponse.json(cached.payload);
     }
 
     const rawCookie = req.headers.get("x-espn-cookie") ?? "";
@@ -78,6 +95,7 @@ export async function GET(
       teams: mapped.teams,
       unmatched: mapped.unmatched,
     };
+    cache.set(leagueId, { at: Date.now(), payload: response });
     return NextResponse.json(response);
   } catch (err) {
     const message =
