@@ -18,6 +18,7 @@ import { createRateLimiter } from "@/lib/rate-limit";
 import { decryptSecret, encryptSecret, mergeSetCookies } from "@/lib/espn-session";
 import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
+import { toCsvCell } from "@/lib/utils";
 import { getDb } from "@/lib/db";
 import { findTradePartners, optimalLineup, powerRankings, proposeTrades, computeTightCalls, eligibleForSlot } from "@/lib/league-intel";
 import { espnTeamToSleeper, fetchDraftPicks, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
@@ -166,9 +167,10 @@ async function unitTests(): Promise<void> {
   );
   check(
     "weekly projection extractor filters to current-season weekly projections",
-    weeklyStats.length === 2 &&
+    weeklyStats.length === 3 &&
       weeklyStats[0].week === 1 && weeklyStats[0].points === 19.3 &&
-      weeklyStats[1].week === 2 && weeklyStats[1].points === 21.4,
+      weeklyStats[1].week === 2 && weeklyStats[1].points === 21.4 &&
+      weeklyStats[2].week === 3 && weeklyStats[2].points === 0,
     `got ${JSON.stringify(weeklyStats)}`
   );
 
@@ -354,6 +356,15 @@ async function unitTests(): Promise<void> {
       svg.includes("LEAN DECLINE") &&
       !svg.includes("<&")
   );
+  check(
+    "csv cells quote commas, quotes, and newlines",
+    toCsvCell("Chase, Jr.") === '"Chase, Jr."' &&
+      toCsvCell('Say "hi"') === '"Say ""hi"""' &&
+      toCsvCell("line1\nline2") === '"line1\nline2"' &&
+      toCsvCell("Patrick Mahomes") === "Patrick Mahomes" &&
+      toCsvCell(null) === "" &&
+      toCsvCell(42) === "42"
+  );
 
   const makePlayer = (id: string, name: string, position: string, score: number | null, ppg: number | null): PlayerSummary => ({
     id,
@@ -458,6 +469,24 @@ async function unitTests(): Promise<void> {
     trendMap.get("smoke-a") === 5,
     `delta=${trendMap.get("smoke-a")}`
   );
+  const etToday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const smokeDate = (
+    db.prepare("SELECT date AS d FROM value_history WHERE player_id = 'smoke-a' ORDER BY date DESC LIMIT 1").get() as { d: string } | undefined
+  )?.d;
+  check(
+    "value history snapshots use America/New_York calendar date",
+    smokeDate === etToday,
+    `row=${smokeDate} et=${etToday}`
+  );
+  const dateIndex = (
+    db.prepare("PRAGMA index_list(value_history)").all() as { name: string }[]
+  ).some((idx) => idx.name === "idx_value_history_date");
+  check("value_history has a date index for trend scans", dateIndex);
   db.prepare("DELETE FROM value_history WHERE player_id = 'smoke-a'").run();
 
   check(
@@ -811,6 +840,18 @@ async function integrationTests(): Promise<void> {
     check("espn session ok after success", getEspnSessionState().status === "ok");
     recordEspnSessionResult(false);
     check("espn session expired after auth failure", getEspnSessionState().status === "expired");
+    recordEspnSessionResult(true);
+    saveEspnSessionCookie("espn_s2=smoke-rotate; SWID={smoke}", true);
+    check(
+      "cookie rotation preserves healthy session status",
+      getEspnSessionState().status === "ok" &&
+        getEspnSessionCookie() === "espn_s2=smoke-rotate; SWID={smoke}"
+    );
+    saveEspnSessionCookie("espn_s2=smoke-test; SWID={smoke}");
+    check(
+      "fresh credential save resets status to untested",
+      getEspnSessionState().status === "untested"
+    );
   } finally {
     if (origSession) {
       db.prepare(

@@ -9,6 +9,50 @@ import type { LeagueResponse, LeagueTeam, PlayerSummary } from "@/types";
 
 export const dynamic = "force-dynamic";
 
+const KNOWN_SLOT_POSITIONS: Record<string, true> = {
+  QB: true,
+  RB: true,
+  WR: true,
+  TE: true,
+  FLEX: true,
+  K: true,
+  DEF: true,
+};
+
+// Sleeper starters are player ids, not slot labels: map each roster's starters
+// to positions and take the modal starter configuration across rosters.
+function deriveRosterSlots(
+  rosters: { starters: string[] }[],
+  getPosition: (playerId: string) => string | undefined
+): Record<string, number> | undefined {
+  const votes = new Map<string, number>();
+  let best: Record<string, number> | undefined;
+  let bestVotes = 0;
+  for (const roster of rosters) {
+    if (!Array.isArray(roster.starters) || roster.starters.length === 0) continue;
+    const counts: Record<string, number> = {};
+    let mapped = 0;
+    for (const pid of roster.starters) {
+      const pos = getPosition(pid);
+      if (!pos || !(pos in KNOWN_SLOT_POSITIONS)) continue;
+      counts[pos] = (counts[pos] ?? 0) + 1;
+      mapped += 1;
+    }
+    if (mapped === 0) continue;
+    const key = Object.keys(counts)
+      .sort()
+      .map((k) => `${k}:${counts[k]}`)
+      .join(",");
+    const v = (votes.get(key) ?? 0) + 1;
+    votes.set(key, v);
+    if (v > bestVotes) {
+      bestVotes = v;
+      best = counts;
+    }
+  }
+  return best;
+}
+
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ leagueId: string }> }
@@ -70,9 +114,10 @@ export async function GET(
     });
 
     teams.sort((a, b) => b.wins - a.wins || b.fpts - a.fpts);
-
     const rec = league.scoring_settings?.rec ?? 0;
     const scoringLabel = rec >= 1 ? "Full PPR" : rec > 0 ? "Half PPR" : "Standard";
+
+    const rosterSlots = deriveRosterSlots(rosters, (pid) => computed.get(pid)?.player.position);
 
     const response: LeagueResponse = {
       ok: true,
@@ -83,6 +128,7 @@ export async function GET(
         season: league.season,
         totalRosters: league.total_rosters,
         scoringLabel,
+        ...(rosterSlots ? { rosterSlots } : {}),
       },
       teams,
     };

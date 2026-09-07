@@ -16,7 +16,7 @@ import { PlayerCard } from "@/components/player-card";
 import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/section-heading";
 import { WatchlistPanel } from "@/components/watchlist-panel";
-import { getPlayerSummaries, getTrendingSummaries } from "@/lib/nfl-data";
+import { computeAllPlayers, getTrendingSummaries } from "@/lib/nfl-data";
 import { getArchivedNews } from "@/lib/news-archive";
 import { cn } from "@/lib/utils";
 import { currentStatSeason } from "@/lib/sleeper";
@@ -45,15 +45,14 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const [trendingSettled, newsSettled, summariesSettled] = await Promise.allSettled([
+  const [trendingSettled, newsSettled, countSettled] = await Promise.allSettled([
     getTrendingSummaries(8),
     getArchivedNews({ limit: 20 }),
-    getPlayerSummaries(),
+    computeAllPlayers().then((computed) => computed.size),
   ]);
   const trending = trendingSettled.status === "fulfilled" ? trendingSettled.value : [];
   const news = newsSettled.status === "fulfilled" ? newsSettled.value.slice(0, 6) : [];
-  const playerCount =
-    summariesSettled.status === "fulfilled" ? summariesSettled.value.length : 0;
+  const playerCount = countSettled.status === "fulfilled" ? countSettled.value : 0;
   const season = currentStatSeason();
 
   const stats: { value: number; label: string; icon: typeof Users }[] = [

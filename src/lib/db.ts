@@ -72,6 +72,7 @@ export function getDb(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_news_first_seen ON news_items (first_seen);
       CREATE INDEX IF NOT EXISTS idx_news_category ON news_items (category);
       CREATE INDEX IF NOT EXISTS idx_news_dedupe ON news_items (dedupe_key);
+      CREATE INDEX IF NOT EXISTS idx_value_history_date ON value_history (date);
     `);
     try {
       db.exec("ALTER TABLE refresh_log ADD COLUMN error TEXT");

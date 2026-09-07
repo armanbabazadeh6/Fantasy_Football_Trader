@@ -69,18 +69,21 @@ function parseRosterSlots(input: unknown): Record<string, number> | null {
   if (entries.length === 0 || entries.length > 12) return null;
   const slots: Record<string, number> = {};
   for (const [position, count] of entries) {
-    if (!(position in SLOT_POSITIONS)) return null;
+    // The engine has no superflex slot type: fold it into FLEX so SF/2QB
+    // leagues keep lineupImpact instead of losing the whole map.
+    const key = position === "SUPERFLEX" ? "FLEX" : position;
+    if (!(key in SLOT_POSITIONS)) continue;
     if (
       typeof count !== "number" ||
       !Number.isInteger(count) ||
       count < 0 ||
       count > 12
     ) {
-      return null;
+      continue;
     }
-    slots[position] = count;
+    slots[key] = (slots[key] ?? 0) + count;
   }
-  return slots;
+  return Object.keys(slots).length > 0 ? slots : null;
 }
 
 export async function POST(req: NextRequest) {

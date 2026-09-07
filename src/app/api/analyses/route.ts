@@ -22,20 +22,25 @@ export async function GET() {
     const rows = db
       .prepare("SELECT * FROM saved_analyses ORDER BY created_at DESC LIMIT 25")
       .all() as SavedAnalysisRow[];
-    return NextResponse.json({
-      ok: true,
-      analyses: rows.map((row) => ({
-        id: row.id,
-        createdAt: row.created_at,
-        verdict: row.verdict,
-        headline: row.headline,
-        give: JSON.parse(row.give_json) as PlayerSummary[],
-        get: JSON.parse(row.get_json) as PlayerSummary[],
-        giveValue: row.give_value ?? 0,
-        getValue: row.get_value ?? 0,
-        aiUsed: row.ai_used === 1,
-      })),
-    });
+    const analyses = [];
+    for (const row of rows) {
+      try {
+        analyses.push({
+          id: row.id,
+          createdAt: row.created_at,
+          verdict: row.verdict,
+          headline: row.headline,
+          give: JSON.parse(row.give_json) as PlayerSummary[],
+          get: JSON.parse(row.get_json) as PlayerSummary[],
+          giveValue: row.give_value ?? 0,
+          getValue: row.get_value ?? 0,
+          aiUsed: row.ai_used === 1,
+        });
+      } catch {
+        continue;
+      }
+    }
+    return NextResponse.json({ ok: true, analyses });
   } catch {
     return NextResponse.json({ ok: false, error: "Failed to load analyses." }, { status: 500 });
   }

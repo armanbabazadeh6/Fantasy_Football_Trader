@@ -62,6 +62,7 @@ async function executeRefreshCycle(logId: number): Promise<void> {
       if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
     }
     const recorded = recordDailyScores(scores);
+    db.prepare("DELETE FROM value_history WHERE date < date('now', '-45 days')").run();
     const { ingestNews } = await import("./news-archive");
     const ingested = await ingestNews();
     await getTrendingSummaries(30);
@@ -272,7 +273,6 @@ async function computePlayerSummaries(): Promise<PlayerSummary[]> {
   for (const [id, entry] of map.entries()) {
     if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
   }
-  recordDailyScores(scores);
   const trends = computeValueTrends(scores);
   const summaries = Array.from(map.values()).map((entry) => {
     const summary = toSummary(entry);

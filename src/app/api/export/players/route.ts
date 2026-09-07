@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPlayerSummaries } from "@/lib/nfl-data";
+import { toCsvCell } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -10,19 +11,19 @@ export async function GET() {
     const lines = players.map((player, index) => {
       const cells = [
         index + 1,
-        `"${player.name.replace(/"/g, '""')}"`,
+        player.name,
         player.position,
         player.team ?? "FA",
         player.age ?? "",
         player.value.score ?? "",
-        `"${player.value.tier ?? ""}"`,
+        player.value.tier ?? "",
         player.value.ppg ?? "",
         player.value.games ?? "",
         player.posRank ?? "",
         player.byeWeek ?? "",
         player.injuryStatus ?? "",
       ];
-      return cells.join(",");
+      return cells.map(toCsvCell).join(",");
     });
     const csv = [header, ...lines].join("\n");
     const date = new Date().toISOString().slice(0, 10);
