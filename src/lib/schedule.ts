@@ -59,7 +59,11 @@ export function buildWeekMatchups(
 export async function fetchWeekMatchups(
   week: number
 ): Promise<Record<string, WeekMatchup>> {
-  return buildWeekMatchups(await fetchScoreboard(), week);
+  try {
+    return buildWeekMatchups(await fetchScoreboard(), week);
+  } catch {
+    return {};
+  }
 }
 
 async function fetchScoreboard(): Promise<ScoreboardEvent[]> {
@@ -74,11 +78,11 @@ async function fetchScoreboard(): Promise<ScoreboardEvent[]> {
         cache: "no-store",
         signal: controller.signal,
       });
-      if (!res.ok) return [];
+      if (!res.ok) {
+        throw new Error(`Scoreboard request failed (${res.status}) for ${url}`);
+      }
       const json = (await res.json()) as { events?: ScoreboardEvent[] };
       return json.events ?? [];
-    } catch {
-      return [];
     } finally {
       clearTimeout(timer);
     }
@@ -86,7 +90,13 @@ async function fetchScoreboard(): Promise<ScoreboardEvent[]> {
 }
 
 export async function fetchTeamByeWeeks(): Promise<Record<string, number>> {
-  const events = await fetchScoreboard();
+  if ((await getCurrentWeek()) < 1) return {};
+  let events: ScoreboardEvent[];
+  try {
+    events = await fetchScoreboard();
+  } catch {
+    return {};
+  }
 
   const played = new Map<string, Set<number>>();
   for (const event of events) {
@@ -117,17 +127,21 @@ export async function fetchTeamByeWeeks(): Promise<Record<string, number>> {
 }
 
 export async function getCurrentWeek(): Promise<number> {
-  const events = await fetchScoreboard();
-  let current = 0;
-  for (const event of events) {
-    if (event.season?.type !== 2) continue;
-    const week = event.week?.number;
-    if (!week || week < 1 || week > 18) continue;
-    if (event.status?.type?.completed && week > current) {
-      current = week;
+  try {
+    const events = await fetchScoreboard();
+    let current = 0;
+    for (const event of events) {
+      if (event.season?.type !== 2) continue;
+      const week = event.week?.number;
+      if (!week || week < 1 || week > 18) continue;
+      if (event.status?.type?.completed && week > current) {
+        current = week;
+      }
     }
+    return current;
+  } catch {
+    return 0;
   }
-  return current;
 }
 
 export function restOfSeasonGames(byeWeek: number | undefined, currentWeek: number): number {

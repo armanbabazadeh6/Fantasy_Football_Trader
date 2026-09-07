@@ -2,24 +2,13 @@ export async function runPrewarm(): Promise<void> {
   const { startBackgroundRefresh } = await import("./nfl-data");
   startBackgroundRefresh();
 
-  const { computeAllPlayers, getPlayerSummaries, getTrendingSummaries } = await import(
-    "./nfl-data"
-  );
-  const { fetchTeamByeWeeks, getCurrentWeek, fetchWeekMatchups } = await import(
-    "./schedule"
-  );
-  const { getArchivedNews } = await import("./news-archive");
-  const { getEspnProjections } = await import("./projections");
+  const { getPlayerSummaries } = await import("./nfl-data");
+  const { fetchTeamByeWeeks, getCurrentWeek } = await import("./schedule");
 
-  const currentWeek = await getCurrentWeek();
   await Promise.allSettled([
-    computeAllPlayers(),
     getPlayerSummaries(),
-    getTrendingSummaries(30),
     fetchTeamByeWeeks(),
-    fetchWeekMatchups(Math.max(1, currentWeek + 1)),
-    getArchivedNews({ limit: 60 }),
-    Promise.resolve(getEspnProjections()),
+    getCurrentWeek(),
   ]);
   console.log("[fft] boot prewarm complete");
 

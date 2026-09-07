@@ -3,8 +3,7 @@ import { aggregateSeason, extractPPR } from "@/lib/fantasy";
 import { computeAllPlayers, getPlayerBundles, getPlayerSummaries, listPlayerSummaries } from "@/lib/nfl-data";
 import { buildWeekMatchups } from "@/lib/schedule";
 import { fetchNews, matchNewsForPlayer } from "@/lib/news";
-import { fetchTeamByeWeeks } from "@/lib/schedule";
-import { restOfSeasonGames } from "@/lib/schedule";
+import { fetchTeamByeWeeks, getCurrentWeek, restOfSeasonGames } from "@/lib/schedule";
 import { blendProjection, computeProjectionSummary, extractWeeklyProjections, getEspnProjections, projectionsNeedSync } from "@/lib/projections";
 import { classifyNews, dedupeKeyFor, getArchivedNews, ingestNews } from "@/lib/news-archive";
 import { getOpsReport } from "@/lib/ops";
@@ -509,6 +508,10 @@ async function integrationTests(): Promise<void> {
     seasons[0] >= 2025 && seasons[0] - seasons[1] === 1
   );
 
+
+  const currentWeek = await getCurrentWeek();
+  console.log(`info  current week: ${currentWeek}`);
+
   const players = await fetchAllPlayers();
   check("Sleeper players fetch", players.size > 1000, `${players.size} fantasy-relevant players`);
   const name = [...players.values()].slice(0, 3).map((p) => `${p.name} (${p.position}/${p.team ?? "FA"})`).join(", ");
@@ -520,9 +523,10 @@ async function integrationTests(): Promise<void> {
     console.log(`info  Mahomes: id=${mahomes.id} age=${mahomes.age} yearsExp=${mahomes.yearsExp}`);
   }
 
-  const week1 = await fetchWeeklyStats(seasons[0], 1);
+  const statsSeason = currentWeek >= 1 ? seasons[0] : seasons[1];
+  const week1 = await fetchWeeklyStats(statsSeason, 1);
   const week1Count = Object.keys(week1).length;
-  check("weekly stats fetch + normalize", week1Count > 100, `week 1 ${seasons[0]}: ${week1Count} stat lines`);
+  check("weekly stats fetch + normalize", week1Count > 100, `week 1 ${statsSeason}: ${week1Count} stat lines`);
   const sampleRow = Object.entries(week1).slice(0, 5).map(([pid, row]) => `${players.get(pid)?.name ?? pid}: ${row.pts_ppr ?? "no pts_ppr"}`).join("; ");
   console.log(`info  week 1 sample rows: ${sampleRow}`);
 
@@ -590,7 +594,11 @@ async function integrationTests(): Promise<void> {
   const summaries = await getPlayerSummaries();
   check("player summaries sorted by value", summaries.length > 1000 && (summaries[0]?.value.score ?? -1) >= (summaries[50]?.value.score ?? -1), `total=${summaries.length}, top=${summaries[0]?.name} (${summaries[0]?.value.score})`);
   const withByes = summaries.filter((p) => p.byeWeek);
-  check("bye weeks attached to summaries", withByes.length > 200, `${withByes.length} players carry a bye week`);
+  check(
+    "bye weeks attached to summaries",
+    currentWeek >= 1 && withByes.length > 200,
+    currentWeek >= 1 ? `${withByes.length} players carry a bye week` : `currentWeek=0, skipped`
+  );
 
   const page0 = await listPlayerSummaries({ page: 0, pageSize: 50 });
   check(
@@ -666,8 +674,10 @@ async function integrationTests(): Promise<void> {
   const byeValues = Object.values(byes);
   check(
     "bye week map covers teams and valid weeks",
-    Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
-    `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
+    currentWeek >= 1 && Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
+    currentWeek >= 1
+      ? `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
+      : `currentWeek=0, skipped`
   );
 
   const ops = await getOpsReport();
