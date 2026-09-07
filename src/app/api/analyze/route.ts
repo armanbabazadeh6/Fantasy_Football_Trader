@@ -44,6 +44,45 @@ function compactBundle(bundle: PlayerBundle, weekOutlook: WeekOutlook) {
   };
 }
 
+const SLOT_POSITIONS: Record<string, true> = {
+  QB: true,
+  RB: true,
+  WR: true,
+  TE: true,
+  FLEX: true,
+  K: true,
+  DEF: true,
+};
+
+function toStringIds(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return [
+    ...new Set(input.filter((id): id is string => typeof id === "string")),
+  ].slice(0, 30);
+}
+
+function parseRosterSlots(input: unknown): Record<string, number> | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return null;
+  }
+  const entries = Object.entries(input);
+  if (entries.length === 0 || entries.length > 12) return null;
+  const slots: Record<string, number> = {};
+  for (const [position, count] of entries) {
+    if (!(position in SLOT_POSITIONS)) return null;
+    if (
+      typeof count !== "number" ||
+      !Number.isInteger(count) ||
+      count < 0 ||
+      count > 12
+    ) {
+      return null;
+    }
+    slots[position] = count;
+  }
+  return slots;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as {
@@ -53,19 +92,10 @@ export async function POST(req: NextRequest) {
       rosterSlots?: unknown;
     } | null;
 
-    const giveIds = Array.isArray(body?.give)
-      ? [...new Set(body!.give as string[])]
-      : [];
-    const getIds = Array.isArray(body?.get)
-      ? [...new Set(body!.get as string[])]
-      : [];
-    const myRosterIds = Array.isArray(body?.myRoster)
-      ? [...new Set(body!.myRoster as string[])]
-      : [];
-    const rosterSlots =
-      body?.rosterSlots && typeof body.rosterSlots === "object"
-        ? (body.rosterSlots as Record<string, number>)
-        : null;
+    const giveIds = toStringIds(body?.give);
+    const getIds = toStringIds(body?.get);
+    const myRosterIds = toStringIds(body?.myRoster);
+    const rosterSlots = parseRosterSlots(body?.rosterSlots);
 
     if (giveIds.length === 0 || getIds.length === 0) {
       return NextResponse.json(

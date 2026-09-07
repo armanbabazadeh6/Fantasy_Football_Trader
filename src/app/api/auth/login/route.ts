@@ -25,10 +25,17 @@ export async function POST(req: NextRequest) {
       { status: 501 }
     );
   }
+  // Client-controlled proxy headers are only trustworthy when a proxy we
+  // control actually fronts the app (TRUST_PROXY=1); otherwise they let an
+  // attacker mint a fresh rate-limit bucket per request. With no proxy,
+  // every request shares the "direct" bucket — acceptable for a
+  // single-user personal app.
   const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "local";
+    process.env.TRUST_PROXY === "1"
+      ? (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          req.headers.get("x-real-ip") ||
+          "direct")
+      : "direct";
   if (!limiter.hit(ip)) {
     return NextResponse.json(
       { ok: false, error: "Too many attempts. Try again in a minute." },
