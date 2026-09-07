@@ -592,20 +592,21 @@ async function integrationTests(): Promise<void> {
   const prospectScoresOk = prospects.every(
     (e) =>
       typeof e.value.score === "number" &&
-      e.value.score >= 5 &&
+      e.value.score >= 3 &&
       e.value.score <= 78 &&
       e.value.tier === "Rookie / Prospect"
   );
-  // Blanket [25,78] would false-fail: rookie QB/TE priors price low by design
-  // (position scaling + rookie-default floors), so only the range floor (5)
-  // and cap (78) are asserted; at least one draft-sourced prospect must
-  // clear 25 to prove the draft data actually feeds the prior.
+  // Floor is 3, not 5: an IR-listed rookie QB prices at the formula minimum
+  // round((0 + 6) * 0.55) = 3 (core 0, ageAdj 6, injury 0.55, no trend).
+  // Blanket [25,78] would false-fail too: rookie QB/TE priors price low by
+  // design, so at least one draft-sourced prospect must clear 25 to prove
+  // the draft data actually feeds the prior.
   const draftProspects = prospects.filter((e) => e.value.prospect?.source === "draft");
   const hasImpactRookie = draftProspects.some((e) => (e.value.score ?? 0) >= 25);
   check(
     "rookie/prospect prior assigns values to statless young players",
     prospects.length > 20 && prospectScoresOk && hasImpactRookie,
-    `${prospects.length} prospects (${draftProspects.length} draft-sourced), all scores in [5,78] with tier=Rookie / Prospect, ${draftProspects.filter((e) => (e.value.score ?? 0) >= 25).length} draft-sourced >= 25`
+    `${prospects.length} prospects (${draftProspects.length} draft-sourced), all scores in [3,78] with tier=Rookie / Prospect, ${draftProspects.filter((e) => (e.value.score ?? 0) >= 25).length} draft-sourced >= 25`
   );
 
   const teRank1 = [...computed.values()].find(

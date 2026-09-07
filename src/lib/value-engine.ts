@@ -105,7 +105,13 @@ export function computePlayerValue(
 ): PlayerValue {
   const played = aggs.filter((a) => a.games > 0);
   if (played.length === 0) {
-    const isProspect = player.rookie || estimateAge(player) <= 24;
+    // Prospect = current-year rookie (Sleeper rookie flag now derives from
+    // metadata.rookie_year) or a genuinely young statless player. Stale ages
+    // (retired camp arms listed at 24 with yearsExp 1-3) are excluded: a
+    // player with multiple pro seasons and no stats is not a prospect.
+    const age = estimateAge(player);
+    const hasProExperience = (player.yearsExp ?? 0) >= 2;
+    const isProspect = player.rookie || (age <= 24 && !hasProExperience);
     if (!isProspect) {
       // Unknown veteran (no stats in the loaded window): stays null; sideValue
       // counts nulls as 0. See the comment on sideValue below.
