@@ -11,6 +11,7 @@ export function getDb(): Database.Database {
     mkdirSync(DATA_DIR, { recursive: true });
     const db = new Database(path.join(DATA_DIR, "app.db"));
     db.pragma("journal_mode = WAL");
+    db.pragma("busy_timeout = 5000");
     db.exec(`
       CREATE TABLE IF NOT EXISTS value_history (
         player_id TEXT NOT NULL,
