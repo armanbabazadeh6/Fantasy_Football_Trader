@@ -1,3 +1,4 @@
+import { getCached } from "./cache";
 import {
   getEspnSessionCookie,
   mergeSetCookies,
@@ -147,6 +148,67 @@ export function normalizeEspnPosition(position?: string): string {
 export function espnSeasonYear(): number {
   const now = new Date();
   return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+export interface EspnDraftPick {
+  overall: number;
+  position: string;
+}
+
+interface EspnDraftPayload {
+  positions?: { id?: string | number; abbreviation?: string }[];
+  picks?: {
+    overall?: number;
+    athlete?: {
+      displayName?: string;
+      position?: { id?: string | number };
+    };
+  }[];
+}
+
+// ESPN position ids for fantasy-relevant offensive picks (from the draft
+// payload's `positions` array): 8=QB, 9=RB, 1=WR, 7=TE.
+const ESPN_DRAFT_POSITION_IDS: Record<string, string> = {
+  "8": "QB",
+  "9": "RB",
+  "1": "WR",
+  "7": "TE",
+};
+
+/**
+ * Skill-position picks from the latest NFL draft, keyed by the athlete's
+ * normalized full name (matchKey). Used as the ADP replacement for pricing
+ * rookies who have no stats yet (Sleeper's ADP endpoint is dead).
+ */
+export async function fetchDraftPicks(): Promise<Map<string, EspnDraftPick>> {
+  const entries = await getCached<[string, EspnDraftPick][]>("espn_draft_picks_v1", 24 * 60 * 60 * 1000, async () => {
+    const url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    try {
+      const res = await fetch(url, {
+        headers: { "user-agent": BROWSER_UA, accept: "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`ESPN draft request failed (${res.status}) for ${url}`);
+      }
+      const json = (await res.json()) as EspnDraftPayload;
+      const out: [string, EspnDraftPick][] = [];
+      for (const pick of json.picks ?? []) {
+        const name = pick.athlete?.displayName;
+        const overall = pick.overall;
+        const posAbbr = ESPN_DRAFT_POSITION_IDS[String(pick.athlete?.position?.id ?? "")];
+        if (!name || typeof overall !== "number" || !posAbbr) continue;
+        out.push([normalizeNameKey(name), { overall, position: posAbbr }]);
+      }
+      return out;
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+  return new Map(entries);
 }
 
 const NAME_SUFFIX_TOKENS = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);

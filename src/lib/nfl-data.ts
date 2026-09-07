@@ -3,6 +3,7 @@ import { fetchNews, matchNewsForPlayer } from "./news";
 import { fetchAllPlayers, fetchSeasonWeekly, fetchTrending, NFL_WEEKS, statSeasons } from "./sleeper";
 import { fetchTeamByeWeeks, fetchWeekMatchups, getCurrentWeek } from "./schedule";
 import { aggregateSeason, extractPPR } from "./fantasy";
+import { fetchDraftPicks, type EspnDraftPick, normalizeNameKey } from "./espn";
 import { computePlayerValue } from "./value-engine";
 import { computeValueTrends, getPlayerValueHistory, recordDailyScores } from "./value-history";
 import { getDb } from "./db";
@@ -145,9 +146,19 @@ export async function loadCoreData(): Promise<CoreData> {
 }
 
 export async function computeAllPlayers(): Promise<Map<string, ComputedPlayer>> {
-  const cached = await getCached<ComputedPlayer[]>("computed_players_v3", 3 * 60 * 60 * 1000, async () => {
+  const cached = await getCached<ComputedPlayer[]>("computed_players_v4", 3 * 60 * 60 * 1000, async () => {
     const core = await loadCoreData();
     const seasons = statSeasons();
+    // NFL draft slots feed the prospect prior for rookies/young players with
+    // no stats. Non-fatal: on failure everyone falls back to the
+    // rookie-default prior.
+    let draftPicks = new Map<string, EspnDraftPick>();
+    try {
+      draftPicks = await fetchDraftPicks();
+    } catch {
+      // keep empty map
+    }
+    // Pass 1: aggregate season stats for every player.
     const result: ComputedPlayer[] = [];
     for (const player of core.players.values()) {
       const aggs: PlayerSeasonAgg[] = [];
@@ -161,14 +172,22 @@ export async function computeAllPlayers(): Promise<Map<string, ComputedPlayer>> 
         if (agg) aggs.push(agg);
       }
       const trendCount = core.trendCounts.get(player.id) ?? 0;
-      result.push({
-        player,
-        aggs,
-        value: computePlayerValue(player, aggs, trendCount),
-        trendCount,
-      });
+      result.push({ player, aggs, value: null as unknown as PlayerValue, trendCount });
     }
+    // Pass 2: rank positions by season totals BEFORE valuation so
+    // computePlayerValue sees posRank (tePremium depends on it).
     applyPositionRanks(result);
+    // Pass 3: compute values with rank-populated aggs. Draft picks are
+    // matched by normalized player name (Sleeper has no id link to ESPN).
+    for (const entry of result) {
+      const pick = draftPicks.get(normalizeNameKey(entry.player.name));
+      entry.value = computePlayerValue(
+        entry.player,
+        entry.aggs,
+        entry.trendCount,
+        pick ? { draftSlot: pick.overall } : undefined
+      );
+    }
     return result;
   });
   return new Map(cached.map((c) => [c.player.id, c]));

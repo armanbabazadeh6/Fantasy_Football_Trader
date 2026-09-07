@@ -8,6 +8,7 @@ const LIVE_STATS_TTL = 6 * 60 * 60 * 1000;
 const HISTORICAL_STATS_TTL = 30 * 24 * 60 * 60 * 1000;
 const TRENDING_TTL = 60 * 60 * 1000;
 const LEAGUE_TTL = 5 * 60 * 1000;
+
 export const NFL_WEEKS = 18;
 
 const FANTASY_POSITIONS = new Set(["QB", "RB", "WR", "TE", "K", "DEF"]);
@@ -72,6 +73,7 @@ interface SleeperPlayerRaw {
   years_exp?: number;
   age?: number;
   rookie?: boolean;
+  metadata?: { rookie_year?: string | number | null };
 }
 
 async function sleeperFetch<T>(urlPath: string): Promise<T> {
@@ -108,6 +110,13 @@ function normalizePlayer(raw: SleeperPlayerRaw): NFLPlayer | null {
   if (!raw.player_id || !name) return null;
   const position = raw.position ?? raw.fantasy_positions?.[0] ?? "";
   if (!FANTASY_POSITIONS.has(position)) return null;
+  // Sleeper's top-level `rookie` flag is unreliable (null for every player in
+  // the current dump); rookie_year from metadata is the durable signal.
+  const rookieYearNum = Number(raw.metadata?.rookie_year);
+  const rookieYear =
+    raw.metadata?.rookie_year != null && Number.isFinite(rookieYearNum) && rookieYearNum > 0
+      ? rookieYearNum
+      : undefined;
   return {
     id: raw.player_id,
     name,
@@ -118,7 +127,8 @@ function normalizePlayer(raw: SleeperPlayerRaw): NFLPlayer | null {
     injuryBodyPart: raw.injury_body_part,
     age: typeof raw.age === "number" ? raw.age : undefined,
     yearsExp: typeof raw.years_exp === "number" ? raw.years_exp : undefined,
-    rookie: Boolean(raw.rookie),
+    rookie: rookieYear !== undefined ? rookieYear >= currentStatSeason() : Boolean(raw.rookie),
+    rookieYear,
     fantasyPositions: raw.fantasy_positions,
   };
 }

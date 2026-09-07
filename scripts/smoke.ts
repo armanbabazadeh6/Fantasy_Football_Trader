@@ -20,7 +20,7 @@ import { buildCardSvg, escapeXml, wrapText } from "@/lib/share-card";
 import { computeValueTrends, recordDailyScores } from "@/lib/value-history";
 import { getDb } from "@/lib/db";
 import { findTradePartners, optimalLineup, powerRankings, proposeTrades, computeTightCalls, eligibleForSlot } from "@/lib/league-intel";
-import { espnTeamToSleeper, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
+import { espnTeamToSleeper, fetchDraftPicks, normalizeEspnPosition, normalizeNameKey } from "@/lib/espn";
 import type { LeagueTeam, PlayerSummary } from "@/types";
 import {
   computeNeeds,
@@ -257,11 +257,37 @@ async function unitTests(): Promise<void> {
     `injured=${injured.score} healthy=${eliteYoung.score}`
   );
 
-  const noData = computePlayerValue(fakePlayer({ rookie: true }), []);
+  const rookieNoData = computePlayerValue(fakePlayer({ rookie: true }), []);
   check(
-    "rookie with no data gets null score, not zero",
-    noData.score === null && noData.tier === "Rookie / Prospect",
-    `score=${noData.score} tier=${noData.tier}`
+    "rookie with no data gets rookie-default prior score, not zero",
+    typeof rookieNoData.score === "number" &&
+      rookieNoData.tier === "Rookie / Prospect" &&
+      rookieNoData.prospect?.source === "rookie-default" &&
+      rookieNoData.prospect.draftSlot === null,
+    `score=${rookieNoData.score} tier=${rookieNoData.tier} priorPpg=${rookieNoData.prospect?.priorPpg}`
+  );
+
+  const rookieTopPick = computePlayerValue(
+    fakePlayer({ rookie: true, position: "RB" }),
+    [],
+    0,
+    { draftSlot: 1 }
+  );
+  check(
+    "top overall pick prices as high-upside prospect",
+    typeof rookieTopPick.score === "number" &&
+      rookieTopPick.score >= 40 &&
+      rookieTopPick.score <= 78 &&
+      rookieTopPick.prospect?.source === "draft" &&
+      rookieTopPick.prospect.draftSlot === 1,
+    `score=${rookieTopPick.score} tier=${rookieTopPick.tier} priorPpg=${rookieTopPick.prospect?.priorPpg}`
+  );
+
+  const agingNoData = computePlayerValue(fakePlayer({ age: 32, rookie: false, yearsExp: 10 }), []);
+  check(
+    "unknown veteran with no data stays null, not zero",
+    agingNoData.score === null && agingNoData.tier === "Unknown",
+    `score=${agingNoData.score} tier=${agingNoData.tier}`
   );
 
   check(
@@ -554,6 +580,51 @@ async function integrationTests(): Promise<void> {
       `      ${String(i + 1).padStart(2)}. ${entry.player.name.padEnd(22)} ${entry.player.position} ${entry.player.team ?? "FA"} score=${entry.value.score} tier=${entry.value.tier} ppg=${latest?.ppg ?? "?"} rank=${latest?.posRank ?? "?"}`
     );
   });
+
+  const draftPicks = await fetchDraftPicks();
+  check(
+    "ESPN draft picks fetch",
+    draftPicks.size > 50,
+    `${draftPicks.size} skill-position picks keyed by normalized name`
+  );
+
+  const prospects = [...computed.values()].filter((e) => e.value.prospect);
+  const prospectScoresOk = prospects.every(
+    (e) =>
+      typeof e.value.score === "number" &&
+      e.value.score >= 5 &&
+      e.value.score <= 78 &&
+      e.value.tier === "Rookie / Prospect"
+  );
+  // Blanket [25,78] would false-fail: rookie QB/TE priors price low by design
+  // (position scaling + rookie-default floors), so only the range floor (5)
+  // and cap (78) are asserted; at least one draft-sourced prospect must
+  // clear 25 to prove the draft data actually feeds the prior.
+  const draftProspects = prospects.filter((e) => e.value.prospect?.source === "draft");
+  const hasImpactRookie = draftProspects.some((e) => (e.value.score ?? 0) >= 25);
+  check(
+    "rookie/prospect prior assigns values to statless young players",
+    prospects.length > 20 && prospectScoresOk && hasImpactRookie,
+    `${prospects.length} prospects (${draftProspects.length} draft-sourced), all scores in [5,78] with tier=Rookie / Prospect, ${draftProspects.filter((e) => (e.value.score ?? 0) >= 25).length} draft-sourced >= 25`
+  );
+
+  const teRank1 = [...computed.values()].find(
+    (e) => e.player.position === "TE" && e.aggs.some((a) => a.posRank === 1)
+  );
+  check(
+    "TE premium applies to the positional TE1",
+    Boolean(teRank1) && (teRank1?.value.breakdown?.tePremium ?? 0) > 0,
+    `${teRank1?.player.name} tePremium=${teRank1?.value.breakdown?.tePremium} score=${teRank1?.value.score}`
+  );
+
+  const teRank4 = [...computed.values()].find(
+    (e) => e.player.position === "TE" && e.aggs.some((a) => a.posRank === 4)
+  );
+  check(
+    "TE premium excludes non-top-3 TEs",
+    !teRank4 || (teRank4.value.breakdown?.tePremium ?? 0) === 0,
+    `${teRank4?.player.name ?? "n/a"} tePremium=${teRank4?.value.breakdown?.tePremium ?? 0}`
+  );
 
   const knownElite = board.slice(0, 30).filter((e) => ["QB", "RB", "WR", "TE"].includes(e.player.position));
   check("top of value board is all skill positions", knownElite.length === Math.min(30, board.length), `${knownElite.length}/30`);

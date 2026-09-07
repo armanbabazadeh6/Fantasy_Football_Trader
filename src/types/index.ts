@@ -9,6 +9,8 @@ export interface NFLPlayer {
   age?: number;
   yearsExp?: number;
   rookie: boolean;
+  /** First rookie season (Sleeper metadata.rookie_year), when known. */
+  rookieYear?: number;
   fantasyPositions?: string[];
 }
 
@@ -78,6 +80,16 @@ export interface PlayerValue {
   ppg: number | null;
   games: number;
   breakdown?: ValueBreakdown;
+  /**
+   * Set for rookies / young players with no played seasons: the draft-pick
+   * prior that replaced the old null score. Absent for players valued from
+   * real stats and for unknown veterans.
+   */
+  prospect?: {
+    draftSlot: number | null;
+    priorPpg: number;
+    source: "draft" | "rookie-default";
+  };
 }
 
 export interface TrendingEntry {
