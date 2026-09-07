@@ -17,6 +17,38 @@ const DEFAULT_SLOTS: Record<string, number> = {
   DEF: 1,
 };
 
+const SLOT_POSITIONS: Record<string, true> = {
+  QB: true,
+  RB: true,
+  WR: true,
+  TE: true,
+  FLEX: true,
+  K: true,
+  DEF: true,
+};
+
+function parseRosterSlots(input: unknown): Record<string, number> | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return null;
+  }
+  const entries = Object.entries(input);
+  if (entries.length === 0 || entries.length > 12) return null;
+  const slots: Record<string, number> = {};
+  for (const [position, count] of entries) {
+    if (!(position in SLOT_POSITIONS)) return null;
+    if (
+      typeof count !== "number" ||
+      !Number.isInteger(count) ||
+      count < 0 ||
+      count > 12
+    ) {
+      return null;
+    }
+    slots[position] = count;
+  }
+  return slots;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as {
@@ -34,10 +66,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rosterSlots =
-      body?.rosterSlots && typeof body.rosterSlots === "object"
-        ? (body.rosterSlots as Record<string, number>)
-        : DEFAULT_SLOTS;
+    const rosterSlots = parseRosterSlots(body?.rosterSlots) ?? DEFAULT_SLOTS;
 
     const [bundles, currentWeek] = await Promise.all([
       getPlayerBundles(ids),
