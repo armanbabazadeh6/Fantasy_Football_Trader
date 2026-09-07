@@ -148,6 +148,12 @@ async function PlayerContent({ id }: { id: string }) {
                 >
                   Compare
                 </Link>
+                <Link
+                  href={`/analyzer?give=${player.id}`}
+                  className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-xs font-semibold text-slate-300 transition-colors hover:border-volt/40 hover:text-volt"
+                >
+                  Analyze trade
+                </Link>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <PositionBadge position={player.position} />

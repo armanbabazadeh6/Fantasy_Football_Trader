@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -8,6 +8,7 @@ import {
   ExternalLink,
   History,
   Lightbulb,
+  Link2,
   Newspaper,
   RotateCcw,
   Save,
@@ -53,6 +54,15 @@ export default function AnalyzerPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedAnalysis[]>([]);
   const [justSaved, setJustSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const hydratedRef = useRef(false);
+  const copyTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -62,7 +72,46 @@ export default function AnalyzerPage() {
       if (savedRaw) setSaved(JSON.parse(savedRaw));
     } catch {
     }
+    const params = new URLSearchParams(window.location.search);
+    const parseIds = (key: string): string[] => {
+      const seen = new Set<string>();
+      for (const part of (params.get(key) ?? "").split(",")) {
+        const id = part.trim();
+        if (id && !seen.has(id)) seen.add(id);
+        if (seen.size >= 15) break;
+      }
+      return [...seen];
+    };
+    const giveIds = parseIds("give");
+    const getIds = parseIds("get");
+    if (giveIds.length === 0 && getIds.length === 0) {
+      hydratedRef.current = true;
+      return;
+    }
+    const allIds = [...giveIds, ...getIds].join(",");
+    fetch(`/api/players?ids=${encodeURIComponent(allIds)}`)
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; players?: PlayerSummary[] }) => {
+        const byId: Record<string, PlayerSummary> = {};
+        for (const p of data.players ?? []) byId[p.id] = p;
+        setGive(giveIds.flatMap((id) => (byId[id] ? [byId[id]] : [])));
+        setGet(getIds.flatMap((id) => (byId[id] ? [byId[id]] : [])));
+        setResult(null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        hydratedRef.current = true;
+      });
   }, []);
+
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const params = new URLSearchParams();
+    if (give.length > 0) params.set("give", give.map((p) => p.id).join(","));
+    if (get.length > 0) params.set("get", get.map((p) => p.id).join(","));
+    const query = params.toString();
+    window.history.replaceState(null, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
+  }, [give, get]);
 
   const disabledIds = useMemo(
     () => [...give, ...get].map((p) => p.id),
@@ -86,6 +135,23 @@ export default function AnalyzerPage() {
     setGet([]);
     setResult(null);
     setError(null);
+  }
+
+  function swapSides() {
+    if (give.length === 0 && get.length === 0) return;
+    const prevGive = give;
+    setGive(get);
+    setGet(prevGive);
+    setResult(null);
+    setError(null);
+  }
+
+  function copyLink() {
+    if (give.length === 0 && get.length === 0) return;
+    navigator.clipboard.writeText(window.location.href).catch(() => {});
+    setCopied(true);
+    clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopied(false), 2000);
   }
 
   async function analyze() {
@@ -281,6 +347,24 @@ export default function AnalyzerPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={swapSides}
+              disabled={give.length === 0 && get.length === 0}
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-3 text-sm font-medium text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              Swap sides
+            </button>
+            <button
+              type="button"
+              onClick={copyLink}
+              disabled={give.length === 0 && get.length === 0}
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-3 text-sm font-medium text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Link2 className="h-4 w-4" />
+              {copied ? "Copied!" : "Copy link"}
+            </button>
             <button
               type="button"
               onClick={resetAll}
