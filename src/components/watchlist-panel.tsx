@@ -14,7 +14,7 @@ import type { NewsItem, PlayerSummary } from "@/types";
 
 export function WatchlistPanel({ news }: { news: NewsItem[] }) {
   const [players, setPlayers] = useState<PlayerSummary[] | null>(null);
-  const [watched, setWatched] = useState(false);
+  const [watched, setWatched] = useState<boolean | null>(null);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,8 +27,6 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setPlayers(null);
-      setWatched(false);
       let ids: string[] = [];
       try {
         const res = await fetch("/api/watchlist");
@@ -46,7 +44,11 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
         } catch {
         }
       }
-      if (cancelled || ids.length === 0) return;
+      if (cancelled) return;
+      if (ids.length === 0) {
+        setWatched(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/players?ids=${ids.join(",")}`);
         const data = (await res.json()) as { ok: boolean; players: PlayerSummary[] };

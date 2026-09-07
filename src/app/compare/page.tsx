@@ -35,8 +35,9 @@ export default function ComparePage() {
         const res = await fetch(`/api/players?ids=${ids.join(",")}`);
         const data = (await res.json()) as { ok: boolean; players: PlayerSummary[] };
         if (!data.ok) return;
-        if (aId && data.players[0]) setA(data.players[0]);
-        if (bId && data.players[1]) setB(data.players[1]);
+        const byId = new Map(data.players.map((p) => [p.id, p]));
+        if (aId && byId.get(aId)) setA(byId.get(aId)!);
+        if (bId && byId.get(bId)) setB(byId.get(bId)!);
       } catch {
       }
     };
