@@ -41,6 +41,19 @@ function check(name: string, condition: boolean, detail?: string): void {
   }
 }
 
+function checkInSeason(
+  name: string,
+  currentWeek: number,
+  condition: (detailIfRun: boolean) => boolean,
+  detail: (detailIfRun: boolean) => string
+): void {
+  if (currentWeek < 1) {
+    console.log(`SKIP  ${name} — currentWeek=0 (preseason)`);
+    return;
+  }
+  check(name, condition(true), detail(true));
+}
+
 function fakePlayer(overrides: Partial<NFLPlayer> = {}): NFLPlayer {
   return {
     id: "test",
@@ -594,10 +607,11 @@ async function integrationTests(): Promise<void> {
   const summaries = await getPlayerSummaries();
   check("player summaries sorted by value", summaries.length > 1000 && (summaries[0]?.value.score ?? -1) >= (summaries[50]?.value.score ?? -1), `total=${summaries.length}, top=${summaries[0]?.name} (${summaries[0]?.value.score})`);
   const withByes = summaries.filter((p) => p.byeWeek);
-  check(
+  checkInSeason(
     "bye weeks attached to summaries",
-    currentWeek >= 1 && withByes.length > 200,
-    currentWeek >= 1 ? `${withByes.length} players carry a bye week` : `currentWeek=0, skipped`
+    currentWeek,
+    () => withByes.length > 200,
+    () => `${withByes.length} players carry a bye week`
   );
 
   const page0 = await listPlayerSummaries({ page: 0, pageSize: 50 });
@@ -672,12 +686,11 @@ async function integrationTests(): Promise<void> {
 
   const byes = await fetchTeamByeWeeks();
   const byeValues = Object.values(byes);
-  check(
+  checkInSeason(
     "bye week map covers teams and valid weeks",
-    currentWeek >= 1 && Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
-    currentWeek >= 1
-      ? `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
-      : `currentWeek=0, skipped`
+    currentWeek,
+    () => Object.keys(byes).length >= 30 && byeValues.every((w) => w >= 5 && w <= 14),
+    () => `${Object.keys(byes).length} teams, weeks ${Math.min(...byeValues)}-${Math.max(...byeValues)}`
   );
 
   const ops = await getOpsReport();
