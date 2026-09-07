@@ -31,9 +31,15 @@ interface CoreData {
   trendCounts: Map<string, number>;
 }
 
-let corePromise: Promise<CoreData> | null = null;
+const globalForCore = globalThis as unknown as {
+  __fftCorePromise?: Promise<CoreData> | null;
+};
 
-let backgroundStarted = false;
+const globalForScheduler = globalThis as unknown as {
+  __fftBackgroundStarted?: boolean;
+  __fftRefreshRunning?: boolean;
+  __fftRefreshLogId?: number;
+};
 
 function insertRefreshRow(): number {
   const db = getDb();
@@ -45,8 +51,11 @@ function insertRefreshRow(): number {
 
 async function executeRefreshCycle(logId: number): Promise<void> {
   const db = getDb();
+  globalForScheduler.__fftRefreshRunning = true;
+  globalForScheduler.__fftRefreshLogId = logId;
   try {
     const computed = await computeAllPlayers();
+    globalForCore.__fftCorePromise = null;
     const scores = new Map<string, number>();
     for (const [id, entry] of computed.entries()) {
       if (typeof entry.value.score === "number") scores.set(id, entry.value.score);
@@ -78,10 +87,16 @@ async function executeRefreshCycle(logId: number): Promise<void> {
       logId
     );
     console.error("[fft] background refresh failed:", err);
+  } finally {
+    globalForScheduler.__fftRefreshRunning = false;
+    globalForScheduler.__fftRefreshLogId = undefined;
   }
 }
 
 export function startRefreshCycle(): number {
+  if (globalForScheduler.__fftRefreshRunning) {
+    return globalForScheduler.__fftRefreshLogId ?? -1;
+  }
   const logId = insertRefreshRow();
   void executeRefreshCycle(logId);
   return logId;
@@ -93,8 +108,15 @@ export async function runBackgroundCycle(): Promise<void> {
 }
 
 export function startBackgroundRefresh(): void {
-  if (backgroundStarted) return;
-  backgroundStarted = true;
+  if (process.env.DISABLE_INTERNAL_SCHEDULER) {
+    if (!globalForScheduler.__fftBackgroundStarted) {
+      globalForScheduler.__fftBackgroundStarted = true;
+      console.log("[fft] internal scheduler disabled via DISABLE_INTERNAL_SCHEDULER");
+    }
+    return;
+  }
+  if (globalForScheduler.__fftBackgroundStarted) return;
+  globalForScheduler.__fftBackgroundStarted = true;
   const intervalMs = 2 * 60 * 60 * 1000;
   setTimeout(() => {
     startRefreshCycle();
@@ -105,7 +127,7 @@ export function startBackgroundRefresh(): void {
 }
 
 export async function loadCoreData(): Promise<CoreData> {
-  corePromise ??= (async () => {
+  globalForCore.__fftCorePromise ??= (async () => {
     const [players, trending] = await Promise.all([
       fetchAllPlayers(),
       fetchTrending("add", 24),
@@ -119,7 +141,7 @@ export async function loadCoreData(): Promise<CoreData> {
     const trendCounts = new Map(trending.map((t) => [t.playerId, t.count]));
     return { players, weeklyBySeason, trendCounts };
   })();
-  return corePromise;
+  return globalForCore.__fftCorePromise;
 }
 
 export async function computeAllPlayers(): Promise<Map<string, ComputedPlayer>> {
@@ -153,18 +175,23 @@ export async function computeAllPlayers(): Promise<Map<string, ComputedPlayer>> 
 }
 
 function applyPositionRanks(computed: ComputedPlayer[]): void {
-  const bySeason = new Map<number, ComputedPlayer[]>();
+  const bySeason = new Map<number, Map<string, ComputedPlayer[]>>();
   for (const entry of computed) {
     for (const agg of entry.aggs) {
-      const key = agg.season;
-      bySeason.set(key, [...(bySeason.get(key) ?? []), entry]);
+      let byPos = bySeason.get(agg.season);
+      if (!byPos) {
+        byPos = new Map<string, ComputedPlayer[]>();
+        bySeason.set(agg.season, byPos);
+      }
+      const group = byPos.get(entry.player.position);
+      if (group) {
+        group.push(entry);
+      } else {
+        byPos.set(entry.player.position, [entry]);
+      }
     }
   }
-  for (const [season, entries] of bySeason) {
-    const byPos = new Map<string, ComputedPlayer[]>();
-    for (const entry of entries) {
-      byPos.set(entry.player.position, [...(byPos.get(entry.player.position) ?? []), entry]);
-    }
+  for (const [season, byPos] of bySeason) {
     for (const group of byPos.values()) {
       group.sort((a, b) => {
         const aTotal = a.aggs.find((g) => g.season === season)?.total ?? -1;

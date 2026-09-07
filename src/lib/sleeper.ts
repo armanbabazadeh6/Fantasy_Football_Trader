@@ -1,4 +1,5 @@
 import { getCached } from "./cache";
+import { getCurrentWeek } from "./schedule";
 import type { NFLPlayer, StatRow, TrendingEntry } from "@/types";
 
 const BASE = "https://api.sleeper.app/v1";
@@ -74,14 +75,21 @@ interface SleeperPlayerRaw {
 }
 
 async function sleeperFetch<T>(urlPath: string): Promise<T> {
-  const res = await fetch(`${BASE}${urlPath}`, {
-    headers: { accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new Error(`Sleeper request failed (${res.status}) for ${urlPath}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(`${BASE}${urlPath}`, {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Sleeper request failed (${res.status}) for ${urlPath}`);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
   }
-  return (await res.json()) as T;
 }
 
 export function currentStatSeason(): number {
@@ -174,8 +182,12 @@ export async function fetchWeeklyStats(
   season: number,
   week: number
 ): Promise<Record<string, StatRow>> {
-  const isCurrent = season >= new Date().getFullYear();
-  const ttl = isCurrent ? LIVE_STATS_TTL : HISTORICAL_STATS_TTL;
+  const currentWeek = await getCurrentWeek();
+  const isLive =
+    season === currentStatSeason() &&
+    currentWeek >= 1 &&
+    week <= Math.min(currentWeek + 1, NFL_WEEKS);
+  const ttl = isLive ? LIVE_STATS_TTL : HISTORICAL_STATS_TTL;
   return getCached<Record<string, StatRow>>(
     `sleeper_stats_${season}_w${week}`,
     ttl,
@@ -189,6 +201,7 @@ export async function fetchWeeklyStats(
 export async function fetchSeasonWeekly(
   season: number
 ): Promise<Record<number, Record<string, StatRow>>> {
+  if (season === currentStatSeason() && (await getCurrentWeek()) < 1) return {};
   const weeks = await Promise.all(
     Array.from({ length: NFL_WEEKS }, (_, i) => i + 1).map(async (week) => {
       try {

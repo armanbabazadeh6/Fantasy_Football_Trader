@@ -7,6 +7,7 @@ interface CacheEntry<T> {
 }
 
 const memory = new Map<string, CacheEntry<unknown>>();
+const inFlight = new Map<string, Promise<unknown>>();
 const CACHE_DIR = path.join(process.cwd(), ".cache");
 
 function fileForKey(key: string): string {
@@ -33,15 +34,25 @@ export async function getCached<T>(
     }
   } catch {
   }
-  const value = await loader();
-  const entry: CacheEntry<T> = { value, expires: Date.now() + ttlMs };
-  memory.set(key, entry);
+  const existing = inFlight.get(key);
+  if (existing) return (await existing) as T;
+  const load = (async () => {
+    const value = await loader();
+    const entry: CacheEntry<T> = { value, expires: Date.now() + ttlMs };
+    memory.set(key, entry);
+    try {
+      await fs.mkdir(CACHE_DIR, { recursive: true });
+      await fs.writeFile(fileForKey(key), JSON.stringify(entry), "utf8");
+    } catch {
+    }
+    return value;
+  })();
+  inFlight.set(key, load);
   try {
-    await fs.mkdir(CACHE_DIR, { recursive: true });
-    await fs.writeFile(fileForKey(key), JSON.stringify(entry), "utf8");
-  } catch {
+    return await load;
+  } finally {
+    inFlight.delete(key);
   }
-  return value;
 }
 
 export function clearMemoryCache(): void {
