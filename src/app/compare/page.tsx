@@ -45,6 +45,12 @@ export default function ComparePage() {
   }, []);
 
   useEffect(() => {
+    if (!a && !b) return;
+    const params = new URLSearchParams();
+    if (a) params.set("a", a.id);
+    if (b) params.set("b", b.id);
+    const query = params.toString();
+    window.history.replaceState(null, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
     if (!a || !b) {
       setBundles(null);
       return;
@@ -71,6 +77,13 @@ export default function ComparePage() {
       cancelled = true;
     };
   }, [a, b]);
+
+  function swapSides() {
+    if (!a && !b) return;
+    const prevA = a;
+    setA(b);
+    setB(prevA);
+  }
 
   const chartData = useMemo(() => {
     if (!bundles || bundles.length < 2) return [];
@@ -116,6 +129,17 @@ export default function ComparePage() {
       num("Trade value", pa.value.score, pb.value.score),
       { label: "Tier", a: pa.value.tier ?? "—", b: pb.value.tier ?? "—", winner: null },
       num("Weighted ppg", pa.value.ppg, pb.value.ppg),
+      num(
+        "Projected ppg",
+        pa.projection ? Math.round(pa.projection.ppg * 10) / 10 : null,
+        pb.projection ? Math.round(pb.projection.ppg * 10) / 10 : null
+      ),
+      num(
+        "ROS points",
+        pa.projection ? Math.round(pa.projection.rosPoints) : null,
+        pb.projection ? Math.round(pb.projection.rosPoints) : null
+      ),
+      num("ROS games", pa.projection?.rosGames, pb.projection?.rosGames),
       num("Season total", la?.total, lb?.total),
       num("Games", la?.games, lb?.games),
       num("Positional rank", la?.posRank, lb?.posRank, false),
@@ -196,10 +220,19 @@ export default function ComparePage() {
 
       <div className="flex flex-col items-stretch gap-4 lg:flex-row">
         {render("a")}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center lg:flex-col lg:gap-2">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-slate-900 font-display text-lg text-slate-400">
             VS
           </div>
+          <button
+            type="button"
+            onClick={swapSides}
+            disabled={!a && !b}
+            title="Swap sides"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-400 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-40"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+          </button>
         </div>
         {render("b")}
       </div>
