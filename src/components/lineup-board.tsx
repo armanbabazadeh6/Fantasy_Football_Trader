@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, Loader2, Trophy } from "lucide-react";
+import { ArrowLeftRight, Loader2, RefreshCw, RotateCcw, Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PositionBadge } from "@/components/position-badge";
 import { cn } from "@/lib/utils";
@@ -55,10 +55,17 @@ export function LineupBoard() {
   const [lineup, setLineup] = useState<LineupResponse | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noRoster, setNoRoster] = useState(false);
 
-  useEffect(() => {
+  const loadLineup = useCallback((mode: "initial" | "refresh") => {
+    if (mode === "initial") {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+    setError(null);
     let roster: StoredRoster | null = null;
     try {
       const raw = localStorage.getItem("fft.league");
@@ -69,6 +76,7 @@ export function LineupBoard() {
     if (!roster || ids.length === 0) {
       setNoRoster(true);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
     setTeamName(roster.teamName ?? null);
@@ -83,8 +91,15 @@ export function LineupBoard() {
         setLineup(json);
       })
       .catch(() => setError("Could not build your lineup. Try again."))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }, []);
+
+  useEffect(() => {
+    loadLineup("initial");
+  }, [loadLineup]);
 
   if (loading) {
     return (
@@ -125,6 +140,14 @@ export function LineupBoard() {
         <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
           {error ?? "Lineup unavailable."}
         </p>
+        <button
+          type="button"
+          onClick={() => loadLineup("initial")}
+          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors hover:border-volt/40 hover:text-volt"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Try again
+        </button>
       </div>
     );
   }
@@ -261,6 +284,15 @@ export function LineupBoard() {
             <p className="mt-1 text-xs text-slate-400">
               points from your optimal starters
             </p>
+            <button
+              type="button"
+              onClick={() => loadLineup("refresh")}
+              disabled={refreshing}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors enabled:hover:border-volt/40 enabled:hover:text-volt disabled:opacity-40"
+            >
+              <RefreshCw className={refreshing ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+              {refreshing ? "Refreshing..." : "Re-run optimizer"}
+            </button>
           </div>
 
           <h2 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-slate-500">
