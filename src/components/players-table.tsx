@@ -12,12 +12,13 @@ import type { PlayerSummary } from "@/types";
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
 const PAGE_SIZE = 50;
 
-type SortKey = "score" | "ppg" | "proj" | "games" | "posRank" | "age" | "name";
+type SortKey = "score" | "ppg" | "proj" | "games" | "posRank" | "age" | "trend" | "name";
 type SortDir = "asc" | "desc";
 
 interface Filters {
   q: string;
   pos: string;
+  rookies: boolean;
   sort: SortKey;
   dir: SortDir;
 }
@@ -36,25 +37,28 @@ export function PlayersTable({
   const [position, setPosition] = useState(initialFilters.pos);
   const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
   const [sortDir, setSortDir] = useState<SortDir>(initialFilters.dir);
+  const [rookiesOnly, setRookiesOnly] = useState(initialFilters.rookies);
   const [players, setPlayers] = useState<PlayerSummary[]>(initialPlayers);
   const [total, setTotal] = useState(initialTotal);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFirstRender = useRef(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const buildParams = useCallback(
-    (page: number) => {
+    (nextPage: number) => {
       const params = new URLSearchParams();
-      params.set("page", String(page));
+      params.set("page", String(nextPage));
       params.set("pageSize", String(PAGE_SIZE));
       params.set("sort", sortKey);
       params.set("dir", sortDir);
       if (position !== "ALL") params.set("pos", position);
+      if (rookiesOnly) params.set("rookies", "1");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       return params;
     },
-    [sortKey, sortDir, position, debouncedQ]
+    [sortKey, sortDir, position, rookiesOnly, debouncedQ]
   );
 
   useEffect(() => {
@@ -75,6 +79,7 @@ export function PlayersTable({
         if (cancelled) return;
         setPlayers(data.players);
         setTotal(data.total);
+        setPage(0);
       })
       .catch(() => {
         if (!cancelled) setError("Failed to load players.");
@@ -91,6 +96,7 @@ export function PlayersTable({
     const params = new URLSearchParams();
     if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
     if (position !== "ALL") params.set("pos", position);
+    if (rookiesOnly) params.set("rookies", "1");
     if (sortKey !== "score") params.set("sort", sortKey);
     if (sortDir !== "desc") params.set("dir", sortDir);
     const qs = params.toString();
@@ -99,7 +105,7 @@ export function PlayersTable({
     if (`/players${search}` !== href) {
       window.history.replaceState(null, "", href);
     }
-  }, [debouncedQ, position, sortKey, sortDir]);
+  }, [debouncedQ, position, rookiesOnly, sortKey, sortDir]);
 
   const hasMore = players.length < total;
 
@@ -107,18 +113,21 @@ export function PlayersTable({
     if (loading || !hasMore) return;
     setLoading(true);
     setError(null);
+    const nextPage = page + 1;
     try {
-      const data = await listPlayerSummariesApi(
-        buildParams(Math.ceil(players.length / PAGE_SIZE))
-      );
-      setPlayers((prev) => [...prev, ...data.players]);
+      const data = await listPlayerSummariesApi(buildParams(nextPage));
+      setPlayers((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...data.players.filter((p) => !seen.has(p.id))];
+      });
       setTotal(data.total);
+      setPage(nextPage);
     } catch {
       setError("Failed to load more players.");
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, players.length, buildParams]);
+  }, [loading, hasMore, page, buildParams]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -192,6 +201,19 @@ export function PlayersTable({
               {pos}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setRookiesOnly((v) => !v)}
+            aria-pressed={rookiesOnly}
+            className={cn(
+              "rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+              rookiesOnly
+                ? "border-volt/40 bg-volt/10 text-volt"
+                : "border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200"
+            )}
+          >
+            Rookies
+          </button>
         </div>
         <a
           href="/api/export/players"
@@ -202,7 +224,7 @@ export function PlayersTable({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-900/60">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-white/5 text-left text-[11px] uppercase tracking-wider text-slate-400">
               <th className="py-3 pl-4 pr-2 font-semibold">#</th>
@@ -225,28 +247,30 @@ export function PlayersTable({
               </th>
               <th className="px-2 py-3 text-center font-semibold">Bye</th>
               <th className="px-2 py-3 text-right font-semibold">
+                <SortButton label="Trend" active={sortKey === "trend"} dir={sortDir} onClick={() => toggleSort("trend")} />
+              </th>
+              {rookiesOnly ? (
+                <th className="px-2 py-3 text-center font-semibold">Pick</th>
+              ) : null}
+              <th className="px-2 py-3 text-right font-semibold">
                 <SortButton label="Age" active={sortKey === "age"} dir={sortDir} onClick={() => toggleSort("age")} />
               </th>
-              <th className="px-2 py-3 font-semibold">
-                <SortButton label="Value" active={sortKey === "score"} dir={sortDir} onClick={() => toggleSort("score")} />
-              </th>
-              <th className="py-3 pl-2 pr-4 font-semibold">Tier</th>
             </tr>
           </thead>
           <tbody>
             {players.map((player, index) => (
-              <PlayerRow key={player.id} player={player} rank={index + 1} />
+              <PlayerRow key={player.id} player={player} rank={index + 1} showPick={rookiesOnly} />
             ))}
             {loading && (
               <tr>
-                <td colSpan={12} className="px-4 py-6 text-center text-sm text-slate-400">
+                <td colSpan={rookiesOnly ? 14 : 13} className="px-4 py-6 text-center text-sm text-slate-400">
                   Loading players...
                 </td>
               </tr>
             )}
             {error && (
               <tr>
-                <td colSpan={12} className="px-4 py-6 text-center text-sm text-red-400">
+                <td colSpan={rookiesOnly ? 14 : 13} className="px-4 py-6 text-center text-sm text-red-400">
                   {error}
                 </td>
               </tr>
@@ -293,7 +317,7 @@ async function listPlayerSummariesApi(
   return { players: data.players, total: data.total };
 }
 
-function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
+function PlayerRow({ player, rank, showPick }: { player: PlayerSummary; rank: number; showPick: boolean }) {
   return (
     <tr className="value-row-hover border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
       <td className="py-2.5 pl-4 pr-2 text-slate-400">{rank}</td>
@@ -352,6 +376,33 @@ function PlayerRow({ player, rank }: { player: PlayerSummary; rank: number }) {
       <td className="px-2 py-2.5 text-center tabular-nums text-slate-400">
         {player.byeWeek ? `W${player.byeWeek}` : "—"}
       </td>
+      <td className="px-2 py-2.5 text-right tabular-nums">
+        {player.valueTrend !== undefined && player.valueTrend !== 0 ? (
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-semibold",
+              player.valueTrend > 0
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-rose-500/15 text-rose-300"
+            )}
+          >
+            {player.valueTrend > 0 ? `+${player.valueTrend}` : player.valueTrend}
+          </span>
+        ) : (
+          <span className="text-slate-600">—</span>
+        )}
+      </td>
+      {showPick ? (
+        <td className="px-2 py-2.5 text-center tabular-nums">
+          {player.value.prospect?.draftSlot != null ? (
+            <span className="rounded-full border border-volt/30 bg-volt/10 px-2 py-0.5 text-[10px] font-semibold text-volt">
+              #{player.value.prospect.draftSlot}
+            </span>
+          ) : (
+            <span className="text-slate-600">—</span>
+          )}
+        </td>
+      ) : null}
       <td className="px-2 py-2.5 text-right tabular-nums text-slate-400">
         {player.age ?? "—"}
       </td>

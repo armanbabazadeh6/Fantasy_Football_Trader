@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
       const result = await listPlayerSummaries({
         q: searchParams.get("q") ?? undefined,
         pos: searchParams.get("pos") ?? undefined,
+        rookies: searchParams.get("rookies") === "1" ? true : undefined,
         sort: searchParams.get("sort") ?? undefined,
         dir: searchParams.get("dir") ?? undefined,
-        page: Number.isFinite(page) && pageParam !== null ? page : undefined,
         pageSize:
           Number.isFinite(pageSize) && pageSizeParam !== null ? pageSize : undefined,
       });

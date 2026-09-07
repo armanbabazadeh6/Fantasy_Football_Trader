@@ -328,6 +328,7 @@ export type PlayerSortKey =
   | "games"
   | "posRank"
   | "age"
+  | "trend"
   | "name";
 
 export const PLAYER_SORT_KEYS: PlayerSortKey[] = [
@@ -337,12 +338,14 @@ export const PLAYER_SORT_KEYS: PlayerSortKey[] = [
   "games",
   "posRank",
   "age",
+  "trend",
   "name",
 ];
 
 export interface ListPlayerParams {
   q?: string;
   pos?: string;
+  rookies?: boolean;
   sort?: string;
   dir?: string;
   page?: number;
@@ -364,6 +367,9 @@ export async function listPlayerSummaries(
   let filtered = summaries;
   if (params.pos && params.pos !== "ALL") {
     filtered = filtered.filter((p) => p.position === params.pos);
+  }
+  if (params.rookies) {
+    filtered = filtered.filter((p) => p.rookie || p.value.prospect !== undefined);
   }
   if (q) {
     filtered = filtered.filter((p) => p.name.toLowerCase().includes(q));
@@ -394,6 +400,9 @@ export async function listPlayerSummaries(
         break;
       case "age":
         cmp = (a.age ?? 99) - (b.age ?? 99);
+        break;
+      case "trend":
+        cmp = (a.valueTrend ?? 0) - (b.valueTrend ?? 0);
         break;
       default:
         cmp = (a.value.score ?? -1) - (b.value.score ?? -1);
