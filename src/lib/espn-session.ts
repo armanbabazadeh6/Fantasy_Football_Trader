@@ -85,11 +85,19 @@ export function decryptSecret(payload: string): string | null {
   }
 }
 
-export function saveEspnSessionCookie(cookie: string): void {
+export function saveEspnSessionCookie(cookie: string, preserveStatus = false): void {
   const clean = cookie.replace(/^cookie\s*:\s*/i, "").replace(/[\r\n]+/g, " ").trim();
   if (clean.length === 0) return;
   const db = getDb();
   ensureTable(db);
+  if (preserveStatus) {
+    db.prepare(
+      `INSERT INTO espn_session (id, cookie, updated_at, status)
+     VALUES (1, ?, ?, 'untested')
+     ON CONFLICT(id) DO UPDATE SET cookie = excluded.cookie, updated_at = excluded.updated_at`
+    ).run(encryptSecret(clean), new Date().toISOString());
+    return;
+  }
   db.prepare(
     `INSERT INTO espn_session (id, cookie, updated_at, status)
      VALUES (1, ?, ?, 'untested')

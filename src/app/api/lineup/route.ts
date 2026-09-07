@@ -35,18 +35,21 @@ function parseRosterSlots(input: unknown): Record<string, number> | null {
   if (entries.length === 0 || entries.length > 12) return null;
   const slots: Record<string, number> = {};
   for (const [position, count] of entries) {
-    if (!(position in SLOT_POSITIONS)) return null;
+    // The engine has no superflex slot type: fold it into FLEX so SF/2QB
+    // leagues keep real slots instead of falling back to DEFAULT_SLOTS.
+    const key = position === "SUPERFLEX" ? "FLEX" : position;
+    if (!(key in SLOT_POSITIONS)) continue;
     if (
       typeof count !== "number" ||
       !Number.isInteger(count) ||
       count < 0 ||
       count > 12
     ) {
-      return null;
+      continue;
     }
-    slots[position] = count;
+    slots[key] = (slots[key] ?? 0) + count;
   }
-  return slots;
+  return Object.keys(slots).length > 0 ? slots : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -81,25 +84,30 @@ export async function POST(req: NextRequest) {
 
     const nextWeek = Math.max(1, currentWeek + 1);
     const matchups = await fetchWeekMatchups(nextWeek);
-
     const infos = new Map<string, LineupPlayerInfo>();
     const effective: PlayerBundle[] = bundles.map((bundle) => {
       const weekly = getWeeklyProjection(bundle.id, nextWeek);
       const isBye = bundle.byeWeek === nextWeek;
+      // Same out-list as value-engine injuryMultiplier's zero-adjacent tier
+      // (IR/OUT/PUP/NFI/SUSP): these players don't play, so project 0.
+      // Questionable/Doubtful keep their projection.
+      const status = (bundle.injuryStatus ?? "").toUpperCase();
+      const isOut = ["IR", "OUT", "PUP", "NFI", "SUSPENSION", "SUSP"].some((s) =>
+        status.includes(s)
+      );
       const blend = bundle.projection?.ppg ?? null;
       const season = bundle.value.ppg ?? null;
-      const points = isBye
-        ? 0
-        : (weekly?.points ?? blend ?? season ?? 0);
-      const source: LineupPlayerInfo["source"] = isBye
-        ? "none"
-        : weekly
-          ? "weekly"
-          : blend !== null
-            ? "blend"
-            : season !== null
-              ? "season"
-              : "none";
+      const points = isBye || isOut ? 0 : (weekly?.points ?? blend ?? season ?? 0);
+      const source: LineupPlayerInfo["source"] =
+        isBye || isOut
+          ? "none"
+          : weekly
+            ? "weekly"
+            : blend !== null
+              ? "blend"
+              : season !== null
+                ? "season"
+                : "none";
       const matchup = bundle.team ? matchups[bundle.team] : undefined;
       infos.set(bundle.id, {
         id: bundle.id,

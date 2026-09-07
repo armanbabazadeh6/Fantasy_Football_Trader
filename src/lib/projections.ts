@@ -36,7 +36,7 @@ export function extractWeeklyProjections(
     const week = stat.scoringPeriodId;
     if (typeof week !== "number" || week < 1 || week > 18) continue;
     const points = stat.appliedTotal;
-    if (typeof points !== "number" || points <= 0) continue;
+    if (typeof points !== "number" || !Number.isFinite(points) || points < 0) continue;
     out.push({ week, points: Math.round(points * 10) / 10 });
   }
   return out;

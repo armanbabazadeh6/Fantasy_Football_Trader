@@ -284,7 +284,7 @@ async function espnFetchJson(
       const baseCookie = getEspnSessionCookie() ?? requestHeaders.cookie ?? "";
       const merged = mergeSetCookies(baseCookie, setCookies);
       if (merged) {
-        saveEspnSessionCookie(merged);
+        saveEspnSessionCookie(merged, true);
         console.log("[fft] ESPN session cookie rotated and saved from Set-Cookie response");
       }
     }

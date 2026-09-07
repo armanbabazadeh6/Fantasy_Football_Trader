@@ -138,3 +138,8 @@ export function scoreBarColor(score: number | null): string {
   if (score >= 42) return "bg-amber-400";
   return "bg-slate-500";
 }
+
+export function toCsvCell(value: unknown): string {
+  const s = value === null || value === undefined ? "" : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
