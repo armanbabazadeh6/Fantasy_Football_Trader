@@ -1,3 +1,9 @@
+import {
+  getEspnSessionCookie,
+  mergeSetCookies,
+  recordEspnSessionResult,
+  saveEspnSessionCookie,
+} from "./espn-session";
 import { computeAllPlayers, type ComputedPlayer } from "./nfl-data";
 import type {
   EspnRawPlayer,
@@ -195,30 +201,34 @@ async function espnFetchJson(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     let effectiveCreds = creds;
+    let usedStoredSession = false;
     if (!credsHaveCookie(creds)) {
-      const { getEspnSessionCookie } = await import("./espn-session");
       const stored = getEspnSessionCookie();
       if (stored) {
         effectiveCreds = { rawCookie: stored };
+        usedStoredSession = true;
       }
     }
+    const requestHeaders = espnHeaders(effectiveCreds);
     const res = await fetch(
       `${ESPN_FFL_BASE}/seasons/${season}/segments/0/leagues/${leagueId}?view=${views.join("&view=")}`,
-      { headers: espnHeaders(effectiveCreds), cache: "no-store", signal: controller.signal }
+      { headers: requestHeaders, cache: "no-store", signal: controller.signal }
     );
-    if (effectiveCreds.rawCookie) {
-      const { getEspnSessionCookie, mergeSetCookies, saveEspnSessionCookie, recordEspnSessionResult } =
-        await import("./espn-session");
-      const headers = res.headers as Headers & { getSetCookie?: () => string[] };
-      const setCookies = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [];
-      const baseCookie = getEspnSessionCookie() ?? effectiveCreds.rawCookie;
-      if (setCookies.length > 0) {
-        const merged = mergeSetCookies(baseCookie, setCookies);
-        if (merged) {
-          saveEspnSessionCookie(merged);
-          console.log("[fft] ESPN session cookie rotated and saved from Set-Cookie response");
-        }
+    const headers = res.headers as Headers & { getSetCookie?: () => string[] };
+    const setCookies = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [];
+    // Rotate the persisted session from Set-Cookie responses on any credentialed
+    // fetch — s2/swid header users too, not only rawCookie (data-pipeline bug 8).
+    if ((credsHaveCookie(creds) || usedStoredSession) && setCookies.length > 0) {
+      const baseCookie = getEspnSessionCookie() ?? requestHeaders.cookie ?? "";
+      const merged = mergeSetCookies(baseCookie, setCookies);
+      if (merged) {
+        saveEspnSessionCookie(merged);
+        console.log("[fft] ESPN session cookie rotated and saved from Set-Cookie response");
       }
+    }
+    // Health signal: only a fetch that used the persisted session says whether
+    // that session is alive; caller-supplied credentials are not the store.
+    if (usedStoredSession) {
       if (res.status === 401 || res.status === 403) {
         recordEspnSessionResult(false);
       } else if (res.ok) {

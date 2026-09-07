@@ -167,6 +167,16 @@ export function clearEspnSession(): void {
   db.prepare("DELETE FROM espn_session WHERE id = 1").run();
 }
 
+const ESPN_COOKIE_DROP_NAMES: Record<string, true> = {
+  ACID: true,
+  DM_MUID: true,
+  gpv_pde: true,
+  _cb: true,
+  _cb_cpm: true,
+  IOM2: true,
+  mit3: true,
+};
+
 export function mergeSetCookies(
   existingCookie: string,
   setCookieHeaders: string[]
@@ -188,6 +198,16 @@ export function mergeSetCookies(
     const name = main.slice(0, eq).trim();
     const value = main.slice(eq + 1).trim();
     if (name.length === 0) continue;
+    // Deletions (empty value) and known tracking cookies are dropped, not
+    // stored, so the persisted blob shrinks/stays bounded instead of growing.
+    if (value.length === 0) {
+      if (pairs.delete(name)) changed = true;
+      continue;
+    }
+    if (ESPN_COOKIE_DROP_NAMES[name]) {
+      if (pairs.delete(name)) changed = true;
+      continue;
+    }
     if (pairs.get(name) !== value) {
       pairs.set(name, value);
       changed = true;
