@@ -128,9 +128,23 @@ export function WatchlistPanel({ news }: { news: NewsItem[] }) {
                     ) : null}
                   </div>
                 </div>
-                <span className={cn("shrink-0 font-display text-2xl", scoreColor(player.value.score))}>
-                  {player.value.score ?? "—"}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {player.valueTrend !== undefined && player.valueTrend !== 0 && (
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.5 text-[10px] font-semibold",
+                        player.valueTrend > 0
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-rose-500/15 text-rose-300"
+                      )}
+                    >
+                      {player.valueTrend > 0 ? `+${player.valueTrend}` : player.valueTrend}
+                    </span>
+                  )}
+                  <span className={cn("font-display text-2xl", scoreColor(player.value.score))}>
+                    {player.value.score ?? "—"}
+                  </span>
+                </div>
               </div>
               {matches.length > 0 && (
                 <ul className="mt-3 space-y-1 border-t border-white/5 pt-3">
